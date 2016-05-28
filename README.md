@@ -79,7 +79,7 @@ Following optional parameters can be provided:
 * **controllers**
 
 
-Example, a datacenter with 3 spines, 4 leafs and 5 compute per leaf will be created by `sudo python mn-table-topo.py -r 3 -c 2`
+Example, a datacenter with 3 spines, 4 leafs and 5 compute per leaf will be created by `python mn-datacenter-topo.py -s 3 -l 4 -c 5`
 
 ```
 $  ./mn-datacenter-topo.py -h
