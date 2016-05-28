@@ -5,6 +5,24 @@ import yaml
 import os
 import argparse
 
+def get_host(row,column):
+    return {
+        'name':'h'+ get_node_id(row,column),
+        'ip':'10.0.'+str(row+1)+'.'+str(column+1)+'/16',
+        'gw':'10.0.0.1'
+        }
+
+def get_switch(row,column):
+    return {
+            'name':get_switch_name(row,column)
+            ,'dpid':format(int(get_node_id(row,column)),'x')
+            ,'protocols':'OpenFlow13'}
+
+def get_switch_name(row,column):
+    return 's'+ get_node_id(row,column)
+
+def get_node_id(row,column):
+    return str(((row+1) * 100) + (column+1))
 
 if __name__ == '__main__':
 
@@ -24,27 +42,38 @@ if __name__ == '__main__':
     data['host']=[]
     data['switch']=[]
     data['link']=[]
+
+    ## we first calculate the host to ensure they are created in port 1 on all switches
+    for row in range(0,inputs.rows):
+        column = 0
+        host=get_host(row,column)
+        switch_name=get_switch_name(row,column)
+        data['host'].append(get_host(row,column))
+        data['link'].append({'source':host['name'],'destination':switch_name})
+        if (inputs.columns > 1):
+            column = inputs.columns - 1
+            host=get_host(row,column)
+            switch_name=get_switch_name(row,column)
+            data['host'].append(get_host(row,column))
+            data['link'].append({'source':host['name'],'destination':switch_name})
+
+
     for row in range(0,inputs.rows):
         for column in range(0,inputs.columns):
-            name=str(((row+1) * 100) + (column+1))
-            switch='s'+name
-            host='h'+name
-            right='s'+str(((row+1) * 100) + (column+2))
-            bottom='s'+str(((row+2) * 100) + (column+1))
 
-            data['switch'].append({'name':switch,'dpid':format(int(name),'x'),'protocols':'OpenFlow13'})
+            switch= get_switch(row,column)
+            right=get_switch_name(row,column+1)
+            bottom=get_switch_name(row+1,column)
 
-            if column == 0 or column == inputs.columns-1:
-                data['host'].append({'name':host,'ip':'10.0.'+str(row+1)+'.'+str(column+1)+'/16','gw':'10.0.0.1'})
-                data['link'].append({'source':host,'destination':switch})
+            data['switch'].append(switch)
 
             if column < inputs.columns - 1:
                 for repeat in range(0,inputs.links_per_rows):
-                    data['link'].append({'source':switch,'destination':right})
+                    data['link'].append({'source':switch['name'],'destination':right})
 
             if row < inputs.rows - 1:
                 for repeat in range(0,inputs.links_per_columns):
-                    data['link'].append({'source':switch,'destination':bottom})
+                    data['link'].append({'source':switch['name'],'destination':bottom})
 
 
     with open(inputs.file, 'w') as outfile:
