@@ -1,0 +1,26 @@
+controller:
+  - name : c0
+    ip : 172.24.86.214
+
+host:
+  - name: h11
+    ip: 10.0.1.1/16
+    gw: 10.0.0.1
+
+switch:
+  - name: s11
+    dpid: B
+    protocols: OpenFlow13
+  - name: s12
+    dpid: C
+    protocols: OpenFlow13
+
+link:
+  - source: h11
+    destination: s11
+  - source: s11
+    destination: s12
+
+interface:
+  - name: eth11
+    switch: s11
