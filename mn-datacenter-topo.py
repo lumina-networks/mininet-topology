@@ -37,14 +37,15 @@ if __name__ == '__main__':
             switch='l'+name
             data['switch'].append({'name':switch,'dpid':format(int(name),'x'),'protocols':'OpenFlow13'})
 
-            for spine in range(0,inputs.spines):
-                spine_name='s'+str(dc_base + (spine+5001))
-                data['link'].append({'source':switch,'destination':spine_name})
-
             for compute in range(0,inputs.computes):
                 compute_name='h'+str(dc_base + ((leaf+1)*1000) + (compute+1))
                 data['host'].append({'name':compute_name,'ip':'10.'+str(datacenter+1)+"."+str(leaf+1)+'.'+str(compute+1)+'/16','gw':'10.'+str(datacenter+1)+'.0.1'})
                 data['link'].append({'source':compute_name,'destination':switch})
+
+            for spine in range(0,inputs.spines):
+                spine_name='s'+str(dc_base + (spine+5001))
+                data['link'].append({'source':switch,'destination':spine_name})
+
 
 
 
