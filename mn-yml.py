@@ -3,7 +3,7 @@
 import os
 import sys
 import yaml
-import mntopo
+import mntopo.topo as topo
 from mininet.log import setLogLevel, info, error
 
 if __name__ == '__main__':
@@ -20,7 +20,7 @@ if __name__ == '__main__':
     if props is None:
         print "ERROR: yml topology file not found"
     else:
-        topo = mntopo.Topo(props)
+        topo = topo.Topo(props)
         topo.start()
         topo.cli()
         topo.stop()
