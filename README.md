@@ -46,16 +46,16 @@ Execute either `sudo mnfm [topology-file-name]`
 
 Following are the attributes that can be added to the topology yaml file to include Flow Manager testing capabilities.
 
-* **ping**: a list of `source` and `destination` hosts to configure a eline/path service. `fmmn` will test the ping between the two hosts
-* **loop**: True if it should loop the whole testing process
-* **loop_max**: maximum loops
-* **retries**: maximum of retries in case of detected error/
-* **retry_interval**: retry interval in seconds
-* **check_links**: `True` if links are discovered or removed properly when Mininet start/stop
-* **check_nodes**: `True` if nodes are discovered or removed properly when Mininet start/stop
-* **check_flows**: `True` if flows are installed or removed properly when Mininet start/stop
-* **check_bsc**: `True` if flows in brocade-bsc-openflow model has to be checked
-* **recreate_services**: `True` if services should be removed/create every time thata Miniet stop/start
+* **ping**: a list of `source` and `destination` hosts to configure a eline/path service. `fmmn` will test the ping between the two hosts. If not provided and `check_bsc` is True, then a ping service for each couple of hosts will be created.
+* **loop**: True if it should loop the whole testing process. Default `True`.
+* **loop_max**: maximum loops. Default `20`.
+* **retries**: maximum of retries in case of detected error. Default `60`.
+* **retry_interval**: retry interval in seconds. Default `5`.
+* **check_links**: `True` if links are discovered or removed properly when Mininet start/stop. Default `True`.
+* **check_nodes**: `True` if nodes are discovered or removed properly when Mininet start/stop. Default `True`.
+* **check_flows**: `True` if flows are installed or removed properly when Mininet start/stop. Default `True`.
+* **check_bsc**: `True` if flows in brocade-bsc-openflow model has to be checked. Default `True`.
+* **recreate_services**: `True` if services should be removed/create every time thata Miniet stop/start. Default `False`.
 * **servicesdir**: a directory where this solution can save and recover flows and groups configuration
 
 ```

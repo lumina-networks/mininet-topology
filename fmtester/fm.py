@@ -39,16 +39,16 @@ class Checker(object):
     def test(self):
         loop = get_property(self.fmprops, 'loop', True)
         loop_interval = get_property(self.fmprops, 'loop_interval', 0)
-        loop_max = get_property(self.fmprops, 'loop_max', 10)
+        loop_max = get_property(self.fmprops, 'loop_max', 20)
 
-        retries = get_property(self.fmprops, 'retries', 30)
-        retry_interval = get_property(self.fmprops, 'retry_interval', 1)
+        retries = get_property(self.fmprops, 'retries', 60)
+        retry_interval = get_property(self.fmprops, 'retry_interval', 5)
         check_links = get_property(self.fmprops, 'check_links', True)
         check_nodes = get_property(self.fmprops, 'check_nodes', True)
         check_flows = get_property(self.fmprops, 'check_flows', True)
         check_bsc = get_property(self.fmprops, 'check_bsc', True)
         recreate_services = get_property(self.fmprops, 'recreate_services', True)
-        pings = get_property(self.fmprops, 'ping', [])
+        pings = get_property(self.fmprops, 'ping', None)
 
         first_iteration = True
         current_loop = loop_max
@@ -56,6 +56,19 @@ class Checker(object):
             if current_loop > 0:
                 current_loop = current_loop - 1
             topo = mntopo.topo.Topo(self.props)
+
+            # if pings not provided let's just create ours
+            if pings is None and check_bsc:
+                pings = []
+                current = None
+                for name in topo.hosts:
+                    if current is None:
+                        current = {}
+                        current['source'] = name
+                    else:
+                        current['destination'] = name
+                        pings.append(current)
+                        current = None
 
             if first_iteration or recreate_services:
                 first_iteration = False
@@ -84,7 +97,7 @@ class Checker(object):
             print "ping worked after {} seconds".format(round((time.time() - t), 3))
 
             if check_flows:
-                if not self._check_flows(retries, retry_interval,check_bsc):
+                if not self._check_flows(retries, retry_interval, check_bsc):
                     topo.stop()
                     return
 
@@ -614,6 +627,8 @@ class Checker(object):
                     print "ping failed from {} to {} ({})".format(src, dst, dstip)
                     pingfailed = True
                     break
+                else:
+                    print 'successful ping from {} to {}'.format(src, dst)
             if not pingfailed:
                 return True
 
