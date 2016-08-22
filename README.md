@@ -1,6 +1,6 @@
 # Mininet Topology Utility
 
-This tools provides a mechanism to quickly create a Mininet network based on a yml definition.
+This tools provides a mechanism to quickly create a Mininet network based on a yml definition. It also provide a testing tool for Flow Manager and a couple of topology generators based.
 
 - [Install](#install)
 - [Usage](#usage)
