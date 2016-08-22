@@ -22,7 +22,7 @@ class Checker(object):
         if self.fmprops is None:
             fmprops = {}
 
-        self.servicesdir = get_property(fmprops,'servicesdir','fmservices')
+        self.servicesdir = get_property(fmprops, 'servicesdir', 'fmservices')
 
         contrl = None
         if 'controller' in props and props['controller'] is not None:
@@ -30,11 +30,11 @@ class Checker(object):
                 contrl = controller
                 break
 
-        self.ip = get_property(contrl,'ip','127.0.0.1')
-        self.port = get_property(contrl,'port', 8181)
-        self.user = get_property(contrl,'user','admin')
-        self.password = get_property(contrl,'password','admin')
-        self.timeout = get_property(contrl,'timeout', 60000)
+        self.ip = get_property(contrl, 'ip', '127.0.0.1')
+        self.port = get_property(contrl, 'port', 8181)
+        self.user = get_property(contrl, 'user', 'admin')
+        self.password = get_property(contrl, 'password', 'admin')
+        self.timeout = get_property(contrl, 'timeout', 60000)
 
     def test(self):
         loop = get_property(self.fmprops, 'loop', True)
@@ -46,9 +46,9 @@ class Checker(object):
         check_links = get_property(self.fmprops, 'check_links', True)
         check_nodes = get_property(self.fmprops, 'check_nodes', True)
         check_flows = get_property(self.fmprops, 'check_flows', True)
+        check_bsc = get_property(self.fmprops, 'check_bsc', True)
         recreate_services = get_property(self.fmprops, 'recreate_services', True)
         pings = get_property(self.fmprops, 'ping', [])
-
 
         first_iteration = True
         current_loop = loop_max
@@ -75,24 +75,22 @@ class Checker(object):
                     topo.stop()
                     return
 
-            print "links and nodes detected in {} seconds".format(round((time.time() - t),3))
+            print "links and nodes detected in {} seconds".format(round((time.time() - t), 3))
 
             if not self._test_pings(retries, retry_interval, topo, pings):
                 topo.stop()
                 return
 
-            print "ping worked after {} seconds".format(round((time.time() - t),3))
+            print "ping worked after {} seconds".format(round((time.time() - t), 3))
 
             if check_flows:
-                if not self._check_flows(retries, retry_interval):
+                if not self._check_flows(retries, retry_interval,check_bsc):
                     topo.stop()
                     return
 
             self.counter()
             if recreate_services:
                 self.delete_pings(topo, pings)
-
-
 
             if not loop:
                 topo.stop()
@@ -113,7 +111,7 @@ class Checker(object):
                 if not self._check_nodes(retries, retry_interval, 0):
                     return
 
-            print "links and nodes removed in {} seconds".format(round((time.time() - t),3))
+            print "links and nodes removed in {} seconds".format(round((time.time() - t), 3))
 
             if check_flows:
                 if not self._check_flows(retries, retry_interval):
@@ -224,10 +222,11 @@ class Checker(object):
             print "saving {} ".format(filename)
             json.dump(group, outfile)
 
-    def _get_number_of_nodes_and_links(self):
-        nodelist = []
-        linklist = []
-        resp = self._http_get(self._get_operational_url() + '/network-topology:network-topology/topology/flow:1')
+    def _get_nodes_and_links(self, topology_name):
+        nodelist = {}
+        linklist = {}
+        resp = self._http_get(self._get_operational_url() +
+                              '/network-topology:network-topology/topology/{}'.format(topology_name))
         if resp is not None and resp.status_code == 200 and resp.content is not None:
             data = json.loads(resp.content)
             topology = data.get('topology')
@@ -238,7 +237,7 @@ class Checker(object):
                     for node in nodes:
                         if unicode(node['node-id']).startswith(unicode('host')):
                             continue
-                        nodelist.append(node['node-id'])
+                        nodelist[node['node-id']] = node
                 links = topology[0].get('link')
                 if links is not None:
                     for link in links:
@@ -246,39 +245,12 @@ class Checker(object):
                             continue
                         if link['destination']['dest-node'].startswith('host'):
                             continue
-                        linklist.append(link['link-id'])
+                        linklist[link['link-id']] = link
 
-        print "Flow topology has {} nodes and {} links. {} ".format(len(nodelist), len(linklist), nodelist)
-        return len(nodelist), len(linklist)
+        print "Topology {} has {} nodes and {} links. {} ".format(topology_name, len(nodelist), len(linklist), nodelist.keys())
+        return nodelist, linklist
 
-    def _get_sr_number_of_nodes_and_links(self):
-        nodelist = []
-        linklist = []
-        resp = self._http_get(self._get_operational_url() + '/network-topology:network-topology/topology/flow:1:sr')
-        if resp is not None and resp.status_code == 200 and resp.content is not None:
-            data = json.loads(resp.content)
-            topology = data.get('topology')
-            nodes = None
-            if topology is not None and len(topology) > 0:
-                nodes = topology[0].get('node')
-                if nodes is not None:
-                    for node in nodes:
-                        nodelist.append(node['node-id'])
-                links = topology[0].get('link')
-                if links is not None:
-                    for link in links:
-                        if link['source']['source-node'].startswith('host'):
-                            continue
-                        if link['destination']['dest-node'].startswith('host'):
-                            continue
-                        linklist.append(link['link-id'])
-
-        print "Sr topology has {} nodes and {} links. {} ".format(len(nodelist), len(linklist), nodelist)
-        return len(nodelist), len(linklist)
-
-    def _get_flow_group_sr_errors(self):
-        flow_errors = []
-        group_errors = []
+    def _get_calculated_flows_groups(self):
         srnodes = {}
         resp = self._http_get(self._get_operational_url() + '/network-topology:network-topology/topology/flow:1:sr')
         if resp is not None and resp.status_code == 200 and resp.content is not None:
@@ -290,7 +262,7 @@ class Checker(object):
                 if nodes is not None:
                     for node in nodes:
                         nodeid = unicode(node['node-id'])
-                        srnodes[nodeid] = {'groups': [], 'table0': [], 'table1': []}
+                        srnodes[nodeid] = {'groups': [], 'flows': []}
                         brocadesr = node.get('brocade-bsc-sr:sr')
                         groups = None
                         if brocadesr is not None:
@@ -299,7 +271,7 @@ class Checker(object):
                             cgroups = groups.get('calculated-group')
                             if cgroups is not None:
                                 for group in cgroups:
-                                    srnodes[nodeid]['groups'].append(unicode(str(group['group-id'])))
+                                    srnodes[nodeid]['groups'].append(group['group-id'])
 
                         flows = None
                         if brocadesr is not None:
@@ -308,46 +280,10 @@ class Checker(object):
                             cflows = flows.get('calculated-flow')
                             if cflows is not None:
                                 for flow in cflows:
-                                    tableid = 'table' + str(flow['table-id'])
-                                    srnodes[nodeid][tableid].append(unicode(str(flow['flow-name'])))
+                                    flowid = 'table/{}/flow/{}'.format(flow['table-id'], flow['flow-name'])
+                                    srnodes[nodeid]['flows'].append(flowid)
 
-        #print "Checking if all SR flows and groups in both places ..."
-        resp = self._http_get(self._get_config_bscopenflow())
-        if resp is None or resp.status_code != 200 or resp.content is None:
-            print 'data not found while trying to get openflow information'
-            return flow_errors, group_errors
-
-        data = json.loads(resp.content)
-        if 'nodes' not in data or 'node' not in data['nodes']:
-            print 'nodes not found while trying to get openflow information'
-            return flow_errors, group_errors
-
-        for node in data['nodes']['node']:
-            nodeid = unicode(node['id'])
-            groups = node.get('group')
-            if groups is not None:
-                for group in groups:
-                    groupid = group['group-id']
-                    if nodeid not in srnodes or unicode(str(groupid)) not in srnodes[nodeid]['groups']:
-                        #print "ERROR: /node/{}/group/{} not found".format(nodeid, str(groupid))
-                        group_errors.append("/node/{}/group/{}".format(nodeid, str(groupid)))
-
-            tables = node.get('table')
-            if tables is not None:
-                for table in tables:
-                    tableid = 'table' + str(table['id'])
-                    flows = table.get('flow')
-                    if flows is not None:
-                        for flow in flows:
-                            flowid = flow['id']
-                            if not flowid.startswith('fm-sr'):
-                                continue
-                            if nodeid not in srnodes or unicode(str(flowid)) not in srnodes[nodeid][tableid]:
-                                #print "ERROR: /node/{}/table/{}/flow/{} not found".format(nodeid, str(tableid), flowid)
-                                flow_errors.append("/node/{}/table/{}/flow/{}".format(nodeid, str(tableid), flowid))
-
-        print "Sr checking done, with {} flow errors and {} group errors".format(len(flow_errors),len(group_errors))
-        return flow_errors, group_errors
+        return srnodes
 
     def counter(self):
         nodecounter = {}
@@ -384,12 +320,11 @@ class Checker(object):
                                                                    nodecounter[nodeid]['table1'])
         print "Counting done"
 
-    def _get_flow_group_errors(self):
-        flow_errors = []
-        group_errors = []
+    def _get_flow_group(self, url, prefix=None):
+        nodes = {}
 
-        #print "Checking if all flows and groups in configuration data store are present in operational data store ..."
-        resp = self._http_get(self._get_config_openflow())
+        # print "Checking if all flows and groups in configuration data store are present in operational data store ..."
+        resp = self._http_get(url)
         if resp is None or resp.status_code != 200 or resp.content is None:
             print 'no data found while trying to get openflow information'
             return flow_errors, group_errors
@@ -397,34 +332,51 @@ class Checker(object):
         data = json.loads(resp.content)
         if 'nodes' not in data or 'node' not in data['nodes']:
             print 'no nodes found while trying to get openflow information'
-            return flow_errors, group_errors
+            return flows, groups, cookies
 
         for node in data['nodes']['node']:
             nodeid = node['id']
-            groups = node.get('flow-node-inventory:group')
-            if groups is not None:
-                for group in groups:
-                    groupid = group['group-id']
-                    resp = self._http_get(self._get_operational_group_url(nodeid, groupid))
-                    if resp is None or resp.status_code != 200:
-                        #print "ERROR: /node/{}/group/{} not found".format(nodeid, str(groupid))
-                        group_errors.append("/node/{}/group/{}".format(nodeid, str(groupid)))
+            flows = {}
+            flowsbscids = {}
+            cookies = {}
+            groups = {}
+            nodes[nodeid] = {
+                'flows': flows,
+                'flowsbscids': flowsbscids,
+                'groups': groups,
+                'cookies': cookies
+            }
+
+            thegroups = node.get('flow-node-inventory:group')
+            if thegroups is None:
+                thegroups = node.get('group')
+
+            if thegroups is not None:
+                for group in thegroups:
+                    groups[group['group-id']] = group
 
             tables = node.get('flow-node-inventory:table')
+            if tables is None:
+                tables = node.get('table')
+
             if tables is not None:
                 for table in tables:
                     tableid = table['id']
-                    flows = table.get('flow')
-                    if flows is not None:
-                        for flow in flows:
-                            flowid = flow['id']
-                            resp = self._http_get(self._get_operational_flow_url(nodeid, tableid, flowid))
-                            if resp is None or resp.status_code != 200:
-                                #print "ERROR: /node/{}/table/{}/flow/{} not found".format(nodeid, str(tableid), flowid)
-                                flow_errors.append("/node/{}/table/{}/flow/{}".format(nodeid, str(tableid), flowid))
+                    theflows = table.get('flow')
+                    if theflows is not None:
+                        for flow in theflows:
+                            flowid = 'table/{}/flow/{}'.format(tableid, flow['id'])
+                            if prefix is None:
+                                flows[flowid] = flow
+                            elif 'cookie' in flow:
+                                cookie = flow.get('cookie')
+                                if cookie >> 56 == prefix:
+                                    flow['bscversion'] = (cookie & 0x00000000FF000000) >> 24
+                                    flow['bscid'] = (cookie & 0x00FFFFFF00000000) >> 32
+                                    flowsbscids[flow['bscid']] = flowid
+                                    flows[flowid] = flow
 
-        print "Openflow checking done, with {} flow errors and {} group errors".format(len(flow_errors),len(group_errors))
-        return flow_errors, group_errors
+        return nodes
 
     def save(self):
         resp = self._http_get(self._get_config_openflow())
@@ -657,9 +609,9 @@ class Checker(object):
                 dstip = topo.hosts_ip[dst]
 
                 output = topo.net.get(src).cmd('ping -c 1 {}'.format(dstip))
-                #print "executed: {}".format(output)
+                # print "executed: {}".format(output)
                 if ' 1 received,' not in output:
-                    print "ping failed from {} to {} ({})".format(src,dst,dstip)
+                    print "ping failed from {} to {} ({})".format(src, dst, dstip)
                     pingfailed = True
                     break
             if not pingfailed:
@@ -672,12 +624,13 @@ class Checker(object):
         return False
 
     def _check_links(self, retries, retry_interval, expected_links):
+        print "checking for expected number of links {}".format(expected_links)
         current_retries = retries
         while (current_retries > 0):
             current_retries = current_retries - 1
-            nodes, links = self._get_number_of_nodes_and_links()
-            srnodes, srlinks = self._get_number_of_nodes_and_links()
-            if links == expected_links and srlinks == links:
+            nodes, links = self._get_nodes_and_links('flow:1')
+            srnodes, srlinks = self._get_nodes_and_links('flow:1:sr')
+            if len(links) == expected_links and len(srlinks) == len(links):
                 return True
             time.sleep(retry_interval)
             if current_retries == 0:
@@ -686,12 +639,13 @@ class Checker(object):
         return False
 
     def _check_nodes(self, retries, retry_interval, expected_nodes):
+        print "checking for expected number of nodes {}".format(expected_nodes)
         current_retries = retries
         while (current_retries > 0):
             current_retries = current_retries - 1
-            nodes, links = self._get_number_of_nodes_and_links()
-            srnodes, srlinks = self._get_number_of_nodes_and_links()
-            if nodes == expected_nodes and nodes == srnodes:
+            nodes, links = self._get_nodes_and_links('flow:1')
+            srnodes, srlinks = self._get_nodes_and_links('flow:1:sr')
+            if len(nodes) == expected_nodes and len(nodes) == len(srnodes):
                 return True
             time.sleep(retry_interval)
             if current_retries == 0:
@@ -699,13 +653,76 @@ class Checker(object):
                     current_retries = retries
         return False
 
-    def _check_flows(self, retries, retry_interval):
+    def _check_flows(self, retries, retry_interval, include_bsc=True):
         current_retries = retries
         while (current_retries > 0):
+            error_found = False
             current_retries = current_retries - 1
-            flow_errors, group_errors = self._get_flow_group_errors()
-            flowsr_errors, groupsr_errors = self._get_flow_group_sr_errors()
-            if len(flow_errors) == 0 and len(group_errors) == 0 and len(flowsr_errors) == 0 and len(groupsr_errors) == 0:
+            calculated_nodes = self._get_calculated_flows_groups()
+            sr_nodes = self._get_flow_group(self._get_config_bscopenflow())
+            config_nodes = self._get_flow_group(self._get_config_openflow(), 0x1f)
+            operational_nodes = self._get_flow_group(self._get_operational_openflow(), 0x1f)
+            if include_bsc:
+                for nodeid in sr_nodes:
+                    node = sr_nodes[nodeid]
+                    if 'flows' in node:
+                        for flowid in node['flows']:
+                            if nodeid not in config_nodes or flowid not in config_nodes[nodeid]['flows']:
+                                print "ERROR: node {} flow {} not configured".format(nodeid, flowid)
+                                error_found = True
+                            elif node['flows'][flowid]['cookie'] == 400 and (nodeid not in calculated_nodes or flowid not in calculated_nodes[nodeid]['flows']):
+                                print "ERROR: node {} flow {} not in calculated flows".format(nodeid, flowid)
+                                error_found = True
+
+                if 'groups' in node:
+                    for groupid in node['groups']:
+                        if nodeid not in config_nodes or groupid not in config_nodes[nodeid]['groups']:
+                            print "ERROR: node {} group {} not configured".format(nodeid, groupid)
+                            error_found = True
+
+            for nodeid in config_nodes:
+                node = config_nodes[nodeid]
+                if 'flows' in node:
+                    for flowid in node['flows']:
+                        bscid = node['flows'][flowid]['bscid']
+                        if nodeid not in operational_nodes or bscid not in operational_nodes[nodeid]['flowsbscids']:
+                            print "ERROR: node {} flow {} not running".format(nodeid, flowid)
+                            error_found = True
+                        elif include_bsc and (nodeid not in sr_nodes or flowid not in sr_nodes[nodeid]['flows']):
+                            print "ERROR: node {} flow {} configured but not by fm".format(nodeid, flowid)
+                            error_found = True
+
+                if 'groups' in node:
+                    for groupid in node['groups']:
+                        if nodeid not in operational_nodes or 'groups' not in operational_nodes[nodeid] or groupid not in operational_nodes[nodeid]['groups']:
+                            print "ERROR: node {} group {} not running".format(nodeid, groupid)
+                            error_found = True
+                        elif include_bsc and (nodeid not in sr_nodes or groupid not in sr_nodes[nodeid]['groups']):
+                            print "ERROR: node {} group {} configured but not by fm".format(nodeid, groupid)
+                            error_found = True
+
+            for nodeid in operational_nodes:
+                node = operational_nodes[nodeid]
+                if 'flows' in node:
+                    for flowid in node['flows']:
+                        bscid = node['flows'][flowid]['bscid']
+                        if nodeid not in config_nodes or bscid not in config_nodes[nodeid]['flowsbscids']:
+                            print "ERROR: node {} flow {} running but not configured".format(nodeid, flowid)
+                            error_found = True
+                        elif include_bsc and (nodeid not in sr_nodes or config_nodes[nodeid]['flowsbscids'][bscid] not in sr_nodes[nodeid]['flows']):
+                            print "ERROR: node {} flow {} running but not configured fm".format(nodeid, flowid)
+                            error_found = True
+
+                if 'groups' in node:
+                    for groupid in node['groups']:
+                        if nodeid not in config_nodes or 'groups' not in config_nodes[nodeid] or groupid not in config_nodes[nodeid]['groups']:
+                            print "ERROR: node {} group {} not running".format(nodeid, groupid)
+                            error_found = True
+                        elif include_bsc and (nodeid not in sr_nodes or groupid not in sr_nodes[nodeid]['groups']):
+                            print "ERROR: node {} group {} configured but not by fm".format(nodeid, groupid)
+                            error_found = True
+
+            if not error_found:
                 return True
             time.sleep(retry_interval)
             if current_retries == 0:
@@ -717,10 +734,9 @@ class Checker(object):
         var = raw_input("Do you want to retry? yes/no:")
         print "you entered", var
         if 'yes' == var:
-         return True
+            return True
         else:
-         return False
-
+            return False
 
 
 def get_property(props, name, default_value=None):

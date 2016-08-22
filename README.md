@@ -54,6 +54,7 @@ Following are the attributes that can be added to the topology yaml file to incl
 * **check_links**: `True` if links are discovered or removed properly when Mininet start/stop
 * **check_nodes**: `True` if nodes are discovered or removed properly when Mininet start/stop
 * **check_flows**: `True` if flows are installed or removed properly when Mininet start/stop
+* **check_bsc**: `True` if flows in brocade-bsc-openflow model has to be checked
 * **recreate_services**: `True` if services should be removed/create every time thata Miniet stop/start
 * **servicesdir**: a directory where this solution can save and recover flows and groups configuration
 
