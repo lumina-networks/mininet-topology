@@ -1,0 +1,9 @@
+#!/usr/bin/python
+
+import sys
+
+from mntopo.topotable import TopoTable
+
+
+if __name__ == "__main__":
+    TopoTable()

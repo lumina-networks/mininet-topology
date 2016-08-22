@@ -50,7 +50,7 @@ class Checker(object):
         pings = get_property(self.fmprops, 'ping', [])
 
 
-        first_iteration = True        
+        first_iteration = True
         current_loop = loop_max
         while loop_max <= 0 or current_loop > 0:
             if current_loop > 0:
@@ -63,6 +63,8 @@ class Checker(object):
 
             topo.start()
 
+            t = time.time()
+
             if check_links:
                 if not self._check_links(retries, retry_interval, topo.number_of_swiches_links):
                     topo.stop()
@@ -73,9 +75,13 @@ class Checker(object):
                     topo.stop()
                     return
 
+            print "links and nodes detected in {} seconds".format(round((time.time() - t),3))
+
             if not self._test_pings(retries, retry_interval, topo, pings):
                 topo.stop()
                 return
+
+            print "ping worked after {} seconds".format(round((time.time() - t),3))
 
             if check_flows:
                 if not self._check_flows(retries, retry_interval):
@@ -86,26 +92,31 @@ class Checker(object):
             if recreate_services:
                 self.delete_pings(topo, pings)
 
+
+
             if not loop:
+                topo.stop()
                 break
             if loop_interval > 0:
                 time.sleep(loop_interval)
 
+            print "stopping mininet"
             topo.stop()
+            print "stopped mininet"
+            t = time.time()
 
             if check_links:
                 if not self._check_links(retries, retry_interval, 0):
-                    topo.stop()
                     return
 
             if check_nodes:
                 if not self._check_nodes(retries, retry_interval, 0):
-                    topo.stop()
                     return
+
+            print "links and nodes removed in {} seconds".format(round((time.time() - t),3))
 
             if check_flows:
                 if not self._check_flows(retries, retry_interval):
-                    topo.stop()
                     return
 
             self.counter()
@@ -646,8 +657,9 @@ class Checker(object):
                 dstip = topo.hosts_ip[dst]
 
                 output = topo.net.get(src).cmd('ping -c 1 {}'.format(dstip))
-                print "executed: {}".format(output)
+                #print "executed: {}".format(output)
                 if ' 1 received,' not in output:
+                    print "ping failed from {} to {} ({})".format(src,dst,dstip)
                     pingfailed = True
                     break
             if not pingfailed:

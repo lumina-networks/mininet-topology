@@ -2,9 +2,86 @@
 
 This tools provides a mechanism to quickly create a Mininet network based on a yml definition.
 
-## Start a Topology
+- [Install](#install)
+- [Usage](#usage)
+- [Topology YAML](#topology-yaml)
 
-Execute either `sudo python mn-yml.py [topology-file-name]` or `sudo ./mn-yml.py [topology-file-name]` . If topology file name is not provided then `mn-topo.yml` will be used.
+## Install
+
+### From source
+
+```
+git clone ssh://git@swnstash.brocade.com:7999/skyn/mininet-topology.git
+cd mininet-topology
+sudo python setup.py install
+```
+
+### Dependencies
+
+The dependencies to run this tools are
+
+- [Mininet](https://github.com/mininet)
+
+
+## Usage
+
+### Mininet topology
+
+Execute either `sudo mnyml [topology-file-name]` to create a topology based on given topology file. This scripts command just starts a Mininet topology using OVS switches.
+
+### Flow Manager tester
+
+Flow Manager tester test if the flows and services runs properly on the given topology. It makes following tasks:
+
+* starts given Mininet topology
+* configure an eline/path sr services for each given pair of hosts
+* checks SDN controller discover all nodes and links properly
+* checks if flows are generated properly
+* check if the pings works between each pair of hosts for given services
+* checks if SR calculcated flows and groups are consistent
+* stops Mininet and check if all flows are removed
+* repeats previous steps as a loop
+
+Execute either `sudo mnfm [topology-file-name]`
+
+Following are the attributes that can be added to the topology yaml file to include Flow Manager testing capabilities.
+
+* **ping**: a list of `source` and `destination` hosts to configure a eline/path service. `fmmn` will test the ping between the two hosts
+* **loop**: True if it should loop the whole testing process
+* **loop_max**: maximum loops
+* **retries**: maximum of retries in case of detected error/
+* **retry_interval**: retry interval in seconds
+* **check_links**: `True` if links are discovered or removed properly when Mininet start/stop
+* **check_nodes**: `True` if nodes are discovered or removed properly when Mininet start/stop
+* **check_flows**: `True` if flows are installed or removed properly when Mininet start/stop
+* **recreate_services**: `True` if services should be removed/create every time thata Miniet stop/start
+* **servicesdir**: a directory where this solution can save and recover flows and groups configuration
+
+```
+fm:
+  ping:
+    - source: h101
+      destination: h104
+  loop: True
+  loop_max: 10
+  loop_interval: 0
+  retries: 12
+  retry_interval: 5
+  check_links: True
+  check_nodes: True
+  check_flows: True
+  recreate_services: False
+  servicesdir: 'fmservices'
+```
+
+### Topology generators
+
+This utility provides a couple of commands to quickly create topologies. Two examples are given, `Table Topology` for given rows and columns and `DataCenter topology` for given number of spines and leafs.
+
+See following sections for further information.
+
+- [Table Topology Generator](#table-topology-generator)
+- [Datacenter Topology Generator](#datacenter-topology-generator)
 
 ## Mininet YAML description
 
@@ -68,7 +145,7 @@ interface:
 
 ## Datacenter Topology Generator
 
-**mn-datacenter-topo.py** creates a topology yaml file like a datacenter with spines, leafs and computes.
+**topodc** creates a topology yaml file like a datacenter with spines, leafs and computes.
 
 Following optional parameters can be provided:
 * **output file name** (default `mn-topo.yml`)
@@ -79,10 +156,10 @@ Following optional parameters can be provided:
 * **controllers**
 
 
-Example, a datacenter with 3 spines, 4 leafs and 5 compute per leaf will be created by `python mn-datacenter-topo.py -s 3 -l 4 -c 5`
+Example, a datacenter with 3 spines, 4 leafs and 5 compute per leaf will be created by `topodc -s 3 -l 4 -c 5`
 
 ```
-$  ./mn-datacenter-topo.py -h
+$  topodc -h
 usage: mn-datacenter-topo.py [-h] [--file FILE] [--spines SPINES]
                              [--leafs LEAFS] [--computes COMPUTES]
                              [--datacenters DATACENTERS]
@@ -109,7 +186,7 @@ optional arguments:
 
 
 
-**mn-table-topo.py** creates a topology yaml file like a table for given number of rows and columns. A host will be attached to each switch on the first and last column.
+**topotb** creates a topology yaml file like a table for given number of rows and columns. A host will be attached to each switch on the first and last column.
 
 Following optional parameters can be provided:
 * **output file name** (default `mn-topo.yml`)
@@ -119,11 +196,11 @@ Following optional parameters can be provided:
 * number of **links-per-columns**  (default `1`) number of links that will connect each pair of switches vertically
 * **controllers**
 
-Example, a table with 3 rows, 2 columns will be created by `python mn-table-topo.py -r 3 -c 2`
+Example, a table with 3 rows, 2 columns will be created by `topotb -r 3 -c 2`
 
 
 ```
-$ ./mn-table-topo.py -h
+$ topotb -h
 usage: mn-table-topo.py [-h] [--file FILE] [--rows ROWS] [--columns COLUMNS]
                         [--links-per-rows LINKS_PER_ROWS]
                         [--links-per-columns LINKS_PER_COLUMNS]
