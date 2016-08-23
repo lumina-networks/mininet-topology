@@ -16,7 +16,6 @@ import yaml
 from mntopo.docopt import docopt
 import mntopo.topo
 from mininet.log import setLogLevel, info, error
-from mininet.clean import cleanup
 
 
 class Shell(object):
