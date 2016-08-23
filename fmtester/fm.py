@@ -748,7 +748,7 @@ class Checker(object):
                             print "ERROR: node {} flow {} configured but not by fm".format(nodeid, flowid)
                             error_found = True
                         elif nodeid not in ovs_flows_groups or bscid not in ovs_flows_groups[nodeid]['bscids']:
-                            print "ERROR: node {} flow {} configured but not OVS switch".format(nodeid, flowid)
+                            print "ERROR: node {} flow {} configured but not in OVS switch".format(nodeid, flowid)
                             error_found = True
                         elif node['flows'][flowid]['cookie'] not in ovs_flows_groups[nodeid]['cookies']:
                             print "WARNING: node {} flow {} configured in OVS but not running same version".format(nodeid, flowid)
@@ -782,10 +782,10 @@ class Checker(object):
                 if 'groups' in node:
                     for groupid in node['groups']:
                         if nodeid not in config_nodes or 'groups' not in config_nodes[nodeid] or groupid not in config_nodes[nodeid]['groups']:
-                            print "ERROR: node {} group {} not running".format(nodeid, groupid)
+                            print "ERROR: node {} group {} running but not configured".format(nodeid, groupid)
                             error_found = True
                         elif self.check_bsc and (nodeid not in sr_nodes or groupid not in sr_nodes[nodeid]['groups']):
-                            print "ERROR: node {} group {} configured but not by fm".format(nodeid, groupid)
+                            print "ERROR: node {} group {} running but not configured in fm".format(nodeid, groupid)
                             error_found = True
 
             for nodeid in ovs_flows_groups:
@@ -793,19 +793,19 @@ class Checker(object):
                 if 'bscids' in node:
                     for bscid in node['bscids']:
                         if nodeid not in config_nodes or bscid not in config_nodes[nodeid]['flowsbscids']:
-                            print "ERROR: node {} flow {} running but not configured".format(nodeid, flowid)
+                            print "ERROR: node {} flow {} running in OVS but not configured".format(nodeid, flowid)
                             error_found = True
                         elif self.check_bsc and (nodeid not in sr_nodes or config_nodes[nodeid]['flowsbscids'][bscid] not in sr_nodes[nodeid]['flows']):
-                            print "ERROR: node {} flow {} running but not configured fm".format(nodeid, flowid)
+                            print "ERROR: node {} flow {} running in OVS but not configured in fm".format(nodeid, flowid)
                             error_found = True
 
                 if 'groups' in node:
                     for groupid in node['groups']:
                         if nodeid not in config_nodes or 'groups' not in config_nodes[nodeid] or groupid not in config_nodes[nodeid]['groups']:
-                            print "ERROR: node {} group {} not running".format(nodeid, groupid)
+                            print "ERROR: node {} group {} running in OVS but not configured".format(nodeid, groupid)
                             error_found = True
                         elif self.check_bsc and (nodeid not in sr_nodes or groupid not in sr_nodes[nodeid]['groups']):
-                            print "ERROR: node {} group {} configured but not by fm".format(nodeid, groupid)
+                            print "ERROR: node {} group {} running in OVS but not in fm".format(nodeid, groupid)
                             error_found = True
 
             if not error_found:
