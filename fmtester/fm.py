@@ -25,6 +25,7 @@ class Checker(object):
             fmprops = {}
 
         self.servicesdir = get_property(fmprops, 'servicesdir', 'fmservices')
+        self.servicesdirExists = False
 
         contrl = None
         if 'controller' in props and props['controller'] is not None:
@@ -214,8 +215,9 @@ class Checker(object):
                                timeout=self.timeout)
 
     def _save_flow(self, nodeid, tableid, flowid, flow):
-        if not os.path.exists(self.servicesdir):
+        if not self.servicesdirExists:
             os.makedirs(self.servicesdir)
+            self.servicesdirExists = os.path.exists(self.servicesdir)
 
         dirname = self.servicesdir + '/nodes/{}/tables/{}/flows'.format(nodeid, str(tableid))
         if not os.path.exists(dirname):
@@ -226,8 +228,9 @@ class Checker(object):
             json.dump(flow, outfile)
 
     def _save_group(self, nodeid, groupid, group):
-        if not os.path.exists(self.servicesdir):
+        if not self.servicesdirExists:
             os.makedirs(self.servicesdir)
+            self.servicesdirExists = os.path.exists(self.servicesdir)
 
         dirname = self.servicesdir + '/nodes/{}/groups'.format(nodeid)
         if not os.path.exists(dirname):
@@ -276,7 +279,7 @@ class Checker(object):
                 nodes = topology[0].get('node')
                 if nodes is not None:
                     for node in nodes:
-                        nodeid = unicode(node['node-id'])
+                        nodeid = node['node-id']
                         srnodes[nodeid] = {'groups': [], 'flows': []}
                         brocadesr = node.get('brocade-bsc-sr:sr')
                         groups = None
@@ -290,13 +293,42 @@ class Checker(object):
 
                         flows = None
                         if brocadesr is not None:
-                            flows = brocadesr.get('calculated-flows')
-                        if flows is not None:
-                            cflows = flows.get('calculated-flow')
-                            if cflows is not None:
-                                for flow in cflows:
-                                    flowid = 'table/{}/flow/{}'.format(flow['table-id'], flow['flow-name'])
-                                    srnodes[nodeid]['flows'].append(flowid)
+                            append_calculated_flows(srnodes, brocadesr.get('calculated-flows'))
+
+        resp = self._http_get(self._get_operational_url() + '/brocade-bsc-path:paths')
+        if resp is not None and resp.status_code == 200 and resp.content is not None:
+            data = json.loads(resp.content)
+            if data.get('paths') is not None:
+                paths = data.get('paths')
+                if paths.get('path') is not None:
+                    for path in paths.get('path'):
+                        append_calculated_flows(srnodes, path.get('calculated-flows'))
+
+                if paths.get('mpls-nodes') is not None:
+                    append_calculated_flow_nodes(srnodes, paths.get('mpls-nodes').get('calculated-flow-nodes'))
+
+        resp = self._http_get(self._get_operational_url() + '/brocade-bsc-eline:elines')
+        if resp is not None and resp.status_code == 200 and resp.content is not None:
+            data = json.loads(resp.content)
+            if data.get('elines') is not None:
+                elines = data.get('elines')
+                if elines.get('eline') is not None:
+                    for eline in elines.get('eline'):
+                        append_calculated_flows(srnodes, eline.get('calculated-flows'))
+
+        resp = self._http_get(self._get_operational_url() + '/brocade-bsc-path-mpls:mpls-nodes')
+        if resp is not None and resp.status_code == 200 and resp.content is not None:
+            data = json.loads(resp.content)
+            mpls_nodes = data.get('mpls-nodes')
+            if mpls_nodes is not None:
+                append_calculated_flow_nodes(srnodes, mpls_nodes.get('calculated-flow-nodes'))
+
+        resp = self._http_get(self._get_operational_url() + '/brocade-bsc-eline-mpls:eline-nodes')
+        if resp is not None and resp.status_code == 200 and resp.content is not None:
+            data = json.loads(resp.content)
+            mpls_nodes = data.get('eline-nodes')
+            if mpls_nodes is not None:
+                append_calculated_flow_nodes(srnodes, mpls_nodes.get('calculated-flow-nodes'))
 
         return srnodes
 
@@ -423,6 +455,9 @@ class Checker(object):
 
     def put(self):
         nodesdir = self.servicesdir + '/nodes'
+        if not os.path.exists(nodesdir):
+            print "ERROR: dir {} does exits".format(nodesdir)
+            return False
         print "configuring groups for {}".format(os.listdir(nodesdir))
         for nodeid in os.listdir(nodesdir):
             nodedir = nodesdir + '/' + nodeid
@@ -690,7 +725,7 @@ class Checker(object):
                             if nodeid not in config_nodes or flowid not in config_nodes[nodeid]['flows']:
                                 print "ERROR: node {} flow {} not configured".format(nodeid, flowid)
                                 error_found = True
-                            elif node['flows'][flowid]['cookie'] == 400 and (nodeid not in calculated_nodes or flowid not in calculated_nodes[nodeid]['flows']):
+                            elif nodeid not in calculated_nodes or flowid not in calculated_nodes[nodeid]['flows']:
                                 print "ERROR: node {} flow {} not in calculated flows".format(nodeid, flowid)
                                 error_found = True
 
@@ -766,3 +801,21 @@ def get_property(props, name, default_value=None):
         if value is not None:
             return value
     return default_value
+
+def append_calculated_flow_nodes(nodes, cnodes):
+    if cnodes is not None:
+        cnodes = cnodes.get('calculated-flow-node')
+        if cnodes is not None:
+            for cnode in cnodes:
+                append_calculated_flows(nodes, cnode.get('calculated-flows'))
+
+def append_calculated_flows(nodes, flows):
+    if flows is not None:
+        cflows = flows.get('calculated-flow')
+        if cflows is not None:
+            for flow in cflows:
+                flowid = 'table/{}/flow/{}'.format(flow['table-id'], flow['flow-name'])
+                nodeid = flow['node-id']
+                if nodeid not in nodes:
+                    nodes[nodeid] = {'groups': [], 'flows': []}
+                nodes[nodeid]['flows'].append(flowid)
