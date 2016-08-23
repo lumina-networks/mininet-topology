@@ -1,19 +1,24 @@
 """Flow Manager Tester.
 
 Usage:
-  mnfm [topology-file] [--loops=LOOPS] [--no-loop]
-  mnfm test [topology-file] [--loops=LOOPS] [--no-loop]
-  mnfm links [-s] [topology-file]
-  mnfm nodes [-s] [topology-file]
-  mnfm flows [-s] [topology-file]
+  mnfm [--topology=FILE] [--loops=LOOPS] [--no-loop]
+  mnfm test [--topology=FILE] [--loops=LOOPS] [--no-loop]
+  mnfm links [-s] [--topology=FILE]
+  mnfm nodes [-s] [--topology=FILE]
+  mnfm flows [-s] [--topology=FILE]
+  mnfm save-flows [--dir=DIR]
+  mnfm put-flows [--dir=DIR]
+  mnfm delete-flows
   mnfm (-h | --help)
 
 Options:
-  -h --help             Show this screen.
-  --version             Show version.
-  -s --stopped          If Mininet is not running.
-  --no-loop             No loop in case of test.
+  -h --help         Show this screen.
+  --version         Show version.
+  -s --stopped      If Mininet is not running.
+  --no-loop         No loop in case of test.
   --loops=LOOPS     Maximum number of loops.
+  --topology=FILE   Topolofy file name [default: mn-topo.yml].
+  --dir=DIR         Directory name to read/save flows [default: fmservices].
 
 """
 
@@ -32,8 +37,8 @@ class Shell(object):
 
         setLogLevel('info')
         file = 'mn-topo.yml'
-        if arguments['topology-file']:
-            file = arguments['topology-file']
+        if arguments['--topology']:
+            file = arguments['--topology']
 
         props = None
         if (os.path.isfile(file)):
@@ -41,7 +46,7 @@ class Shell(object):
                 props = yaml.load(f)
 
         if props is None:
-            print "ERROR: yml topology file not found"
+            print "ERROR: yml topology file {} not found".format(file)
             sys.exit()
 
         checker = fmtester.fm.Checker(props)
@@ -50,6 +55,8 @@ class Shell(object):
             checker.loop = False
         if arguments['--loops']:
             checker.loop_max = int(arguments['--loops'])
+        if arguments['--dir']:
+            checker.servicesdir = arguments['--dir']
 
         if arguments['links'] and arguments['--stopped']:
             checker._check_links(0)
@@ -61,6 +68,12 @@ class Shell(object):
             checker._check_nodes(0)
         elif arguments['flows']:
             checker._check_nodes(checker.topo.number_of_switches)
+        elif arguments['put-flows']:
+            checker.put()
+        elif arguments['save-flows']:
+            checker.save()
+        elif arguments['delete-flows']:
+            checker.delete()
         else:
             checker.test()
 
