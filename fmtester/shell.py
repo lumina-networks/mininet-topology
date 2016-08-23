@@ -1,8 +1,8 @@
 """Flow Manager Tester.
 
 Usage:
-  mnfm [--topology=FILE] [--loops=LOOPS] [--no-loop]
-  mnfm test [--topology=FILE] [--loops=LOOPS] [--no-loop]
+  mnfm [--topology=FILE] [--loops=LOOPS] [--no-loop] [--retries=RETRY] [--interval=SEC]
+  mnfm test [--topology=FILE] [--loops=LOOPS] [--no-loop] [--retries=RETRY] [--interval=SEC]
   mnfm links [-s] [--topology=FILE]
   mnfm nodes [-s] [--topology=FILE]
   mnfm flows [-s] [--topology=FILE]
@@ -19,6 +19,8 @@ Options:
   --loops=LOOPS     Maximum number of loops.
   --topology=FILE   Topolofy file name [default: mn-topo.yml].
   --dir=DIR         Directory name to read/save flows [default: fmservices].
+  --retries=RETRY   Max number of retries.
+  --interval=SEC    Interval in seconds between retries.
 
 """
 
@@ -57,6 +59,10 @@ class Shell(object):
             checker.loop_max = int(arguments['--loops'])
         if arguments['--dir']:
             checker.servicesdir = arguments['--dir']
+        if arguments['--retries']:
+            checker.retries = int(arguments['--retries'])
+        if arguments['--interval']:
+            checker.retry_interval = int(arguments['--interval'])
 
         if arguments['links'] and arguments['--stopped']:
             checker._check_links(0)
