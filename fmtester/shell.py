@@ -1,17 +1,19 @@
 """Flow Manager Tester.
 
 Usage:
-  mnfm [topology-file]
-  mnfm test [topology-file]
-  mnfm links [--stopped] [topology-file]
-  mnfm nodes [--stopped] [topology-file]
-  mnfm flows [--stopped] [topology-file]
+  mnfm [topology-file] [--loops=LOOPS] [--no-loop]
+  mnfm test [topology-file] [--loops=LOOPS] [--no-loop]
+  mnfm links [-s] [topology-file]
+  mnfm nodes [-s] [topology-file]
+  mnfm flows [-s] [topology-file]
   mnfm (-h | --help)
 
 Options:
-  -h --help     Show this screen.
-  --version     Show version.
-  --stopped     If Mininet is not running.
+  -h --help             Show this screen.
+  --version             Show version.
+  -s --stopped          If Mininet is not running.
+  --no-loop             No loop in case of test.
+  --loops=LOOPS     Maximum number of loops.
 
 """
 
@@ -27,6 +29,7 @@ class Shell(object):
 
     def __init__(self):
         arguments = docopt(__doc__, version='Flow Manager Tester 1.0')
+        print(arguments)
 
         setLogLevel('info')
         file = 'mn-topo.yml'
@@ -43,16 +46,22 @@ class Shell(object):
             sys.exit()
 
         checker = fmtester.fm.Checker(props)
+
+        if arguments['--no-loop']:
+            checker.loop = False
+        if arguments['--loops']:
+            checker.loop_max = int(arguments['--loops'])
+
         if arguments['links'] and arguments['--stopped']:
             checker._check_links(0)
         elif arguments['links']:
-            checker._check_links(checker.topo.expected_links)
+            checker._check_links(checker.topo.number_of_swiches_links)
         elif arguments['flows']:
             checker._check_flows()
         elif arguments['nodes'] and arguments['--stopped']:
             checker._check_nodes(0)
         elif arguments['flows']:
-            checker._check_nodes(checker.topo.expected_nodes)
+            checker._check_nodes(checker.topo.number_of_switches)
         else:
             checker.test()
 
