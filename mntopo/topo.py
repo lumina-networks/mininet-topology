@@ -1,3 +1,4 @@
+import re
 import subprocess
 from functools import partial
 
@@ -147,6 +148,36 @@ class Topo(object):
     def stop(self):
         self.net.stop()
         cleanup()
+
+    def get_nodes_flows_groups(self, prefix=None):
+        nodes = {}
+        for name in self.switches_openflow_names:
+            oname = self.switches_openflow_names[name]
+            nodes[oname] = {'cookies': [], 'groups': [],'bscids':{}}
+            output = subprocess.check_output(
+                "sudo ovs-ofctl dump-groups {} --protocol=Openflow13".format(name), shell=True)
+            pattern = r'group_id=(\d+)'
+            regex = re.compile(pattern, re.IGNORECASE)
+            for match in regex.finditer(output):
+                nodes[oname]['groups'].append(int(match.group(1)))
+
+            output = subprocess.check_output(
+                "sudo ovs-ofctl dump-flows {} --protocol=Openflow13".format(name), shell=True)
+            pattern = r'cookie=(0[xX][0-9a-fA-F]+)'
+            regex = re.compile(pattern, re.IGNORECASE)
+            for match in regex.finditer(output):
+                number = int(match.group(1), 16)
+                nodes[oname]['cookies'].append(number)
+                if prefix is None:
+                    continue
+                if number >> 56 == prefix:
+                    bscid = (number & 0x00FFFFFF00000000) >> 32
+                    nodes[oname]['bscids'][bscid]= {
+                        'cookie': number,
+                        'version': (number & 0x00000000FF000000) >> 24
+                    }
+
+        return nodes
 
 
 def exists_bridge(name):
