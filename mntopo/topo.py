@@ -1,6 +1,7 @@
 import subprocess
 from functools import partial
 
+from mininet.clean import cleanup
 from mininet.topo import Topo as MNTopo
 from mininet.net import Mininet
 from mininet.node import Node, Controller, RemoteController, UserSwitch, OVSSwitch
@@ -41,9 +42,10 @@ class Topo(object):
 
         #switchClass = UserSwitch
         #switchClass = OVSSwitch
-        switchClass = partial(OVSSwitch, datapath='user')
+        self.switchClass = partial(OVSSwitch, datapath='user')
 
         topo = MNTopo()
+        self.topo = topo
 
         if 'host' not in props or props['host'] is None:
             props['host'] = []
@@ -125,20 +127,18 @@ class Topo(object):
         for controller in props['controller']:
             controllers.append(RemoteController(controller['name'], ip=controller['ip']))
 
-        self.net = Mininet(topo=topo, switch=switchClass, controller=controllers[0])
+    def start(self):
+        cleanup()
 
-        if 'interface' not in props or props['interface'] is None:
-            props['interface'] = []
+        self.net = Mininet(topo=self.topo, switch=self.switchClass, controller=self.controllers[0])
 
-        for interface in props['interface']:
+        if 'interface' not in self.props or self.props['interface'] is None:
+            self.props['interface'] = []
+
+        for interface in self.props['interface']:
             name = interface['name']
             interfaces[name] = Intf(name, node=net.nameToNode[interface['switch']])
 
-    def start(self):
-        for switch in self.switches:
-            if exists_bridge(switch):
-                print "WARNING: brigde {} is running. going to delete it.".format(switch)
-                delete_bridge(switch)
         self.net.start()
 
     def cli(self):
@@ -146,10 +146,7 @@ class Topo(object):
 
     def stop(self):
         self.net.stop()
-        for switch in self.switches:
-            if exists_bridge(switch):
-                print "WARNING: node {} was running after stopping mininet".format(switch)
-                delete_bridge(switch)
+        cleanup()
 
 
 def exists_bridge(name):
@@ -157,13 +154,4 @@ def exists_bridge(name):
         grepOut = subprocess.check_output("sudo ovs-vsctl br-exists {}".format(name), shell=True)
         return True
     except subprocess.CalledProcessError as grepexc:
-        return False
-
-
-def delete_bridge(name):
-    try:
-        grepOut = subprocess.check_output("sudo ovs-vsctl del-br {}".format(name), shell=True)
-        return True
-    except subprocess.CalledProcessError as grepexc:
-        print "ERROR: {} bridge cannot be deleted".format(name)
         return False

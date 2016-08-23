@@ -17,6 +17,8 @@ class Checker(object):
 
     def __init__(self, props):
         self.props = props
+        self.topo = mntopo.topo.Topo(self.props)
+
         self.fmprops = props.get('fm')
         fmprops = self.fmprops
         if self.fmprops is None:
@@ -36,98 +38,98 @@ class Checker(object):
         self.password = get_property(contrl, 'password', 'admin')
         self.timeout = get_property(contrl, 'timeout', 60000)
 
-    def test(self):
-        loop = get_property(self.fmprops, 'loop', True)
-        loop_interval = get_property(self.fmprops, 'loop_interval', 0)
-        loop_max = get_property(self.fmprops, 'loop_max', 20)
+        self.loop = get_property(self.fmprops, 'loop', True)
+        self.loop_interval = get_property(self.fmprops, 'loop_interval', 0)
+        self.loop_max = get_property(self.fmprops, 'loop_max', 2)
 
-        retries = get_property(self.fmprops, 'retries', 60)
-        retry_interval = get_property(self.fmprops, 'retry_interval', 5)
-        check_links = get_property(self.fmprops, 'check_links', True)
-        check_nodes = get_property(self.fmprops, 'check_nodes', True)
-        check_flows = get_property(self.fmprops, 'check_flows', True)
-        check_bsc = get_property(self.fmprops, 'check_bsc', True)
-        recreate_services = get_property(self.fmprops, 'recreate_services', True)
-        pings = get_property(self.fmprops, 'ping', None)
+        self.retries = get_property(self.fmprops, 'retries', 60)
+        self.retry_interval = get_property(self.fmprops, 'retry_interval', 5)
+        self.check_links = get_property(self.fmprops, 'check_links', True)
+        self.check_nodes = get_property(self.fmprops, 'check_nodes', True)
+        self.check_flows = get_property(self.fmprops, 'check_flows', True)
+        self.check_bsc = get_property(self.fmprops, 'check_bsc', True)
+        self.recreate_services = get_property(self.fmprops, 'recreate_services', True)
+        self.pings = get_property(self.fmprops, 'ping', None)
+
+        # if pings not provided let's just create ours
+        if self.pings is None and self.check_bsc:
+            self.pings = []
+            current = None
+            for name in sorted(self.topo.hosts):
+                if current is None:
+                    current = {}
+                    current['source'] = name
+                else:
+                    current['destination'] = name
+                    self.pings.append(current)
+                    current = None
+
+    def test(self):
 
         first_iteration = True
-        current_loop = loop_max
-        while loop_max <= 0 or current_loop > 0:
+        current_loop = self.loop_max
+        while self.loop_max <= 0 or current_loop > 0:
             if current_loop > 0:
                 current_loop = current_loop - 1
-            topo = mntopo.topo.Topo(self.props)
 
-            # if pings not provided let's just create ours
-            if pings is None and check_bsc:
-                pings = []
-                current = None
-                for name in topo.hosts:
-                    if current is None:
-                        current = {}
-                        current['source'] = name
-                    else:
-                        current['destination'] = name
-                        pings.append(current)
-                        current = None
-
-            if first_iteration or recreate_services:
+            if first_iteration or self.recreate_services:
                 first_iteration = False
-                self.create_pings(topo, pings)
+                self.create_pings()
 
-            topo.start()
+            self.topo.start()
 
             t = time.time()
 
-            if check_links:
-                if not self._check_links(retries, retry_interval, topo.number_of_swiches_links):
-                    topo.stop()
+            if self.check_links:
+                if not self._check_links(self.topo.number_of_swiches_links):
+                    self.topo.stop()
                     return
 
-            if check_nodes:
-                if not self._check_nodes(retries, retry_interval, topo.number_of_switches):
-                    topo.stop()
+            if self.check_nodes:
+                if not self._check_nodes(self.topo.number_of_switches):
+                    self.topo.stop()
                     return
 
             print "links and nodes detected in {} seconds".format(round((time.time() - t), 3))
 
-            if not self._test_pings(retries, retry_interval, topo, pings):
-                topo.stop()
+            if not self._test_pings():
+                self.topo.stop()
                 return
 
             print "ping worked after {} seconds".format(round((time.time() - t), 3))
 
-            if check_flows:
-                if not self._check_flows(retries, retry_interval, check_bsc):
-                    topo.stop()
+            if self.check_flows:
+                if not self._check_flows():
+                    self.topo.stop()
                     return
 
             self.counter()
-            if recreate_services:
-                self.delete_pings(topo, pings)
+            if self.recreate_services:
+                self.delete_pings()
 
-            if not loop:
-                topo.stop()
+            if not self.loop:
+                self.topo.stop()
                 break
-            if loop_interval > 0:
+            if self.loop_interval > 0:
                 time.sleep(loop_interval)
 
             print "stopping mininet"
-            topo.stop()
+            self.topo.stop()
             print "stopped mininet"
             t = time.time()
 
-            if check_links:
-                if not self._check_links(retries, retry_interval, 0):
+            if self.check_links:
+                if not self._check_links(0):
                     return
 
-            if check_nodes:
-                if not self._check_nodes(retries, retry_interval, 0):
+            if self.check_nodes:
+                if not self._check_nodes(0):
                     return
 
             print "links and nodes removed in {} seconds".format(round((time.time() - t), 3))
 
-            if check_flows:
-                if not self._check_flows(retries, retry_interval):
+            if self.check_flows:
+                if not self._check_flows():
                     return
 
             self.counter()
@@ -465,16 +467,16 @@ class Checker(object):
         if resp is not None and resp.status_code != 404:
             print "ERROR configuration has not been deleted"
 
-    def create_pings(self, topo, pings):
-        for ping in pings:
+    def create_pings(self):
+        for ping in self.pings:
             src = ping['source']
-            srcsw = topo.host_connected_switch[src]
-            srcsw_name = topo.switches_openflow_names[srcsw]
-            srcport = topo.portmap[srcsw][src]
+            srcsw = self.topo.host_connected_switch[src]
+            srcsw_name = self.topo.switches_openflow_names[srcsw]
+            srcport = self.topo.portmap[srcsw][src]
             dst = ping['destination']
-            dstsw = topo.host_connected_switch[dst]
-            dstsw_name = topo.switches_openflow_names[dstsw]
-            dstport = topo.portmap[dstsw][dst]
+            dstsw = self.topo.host_connected_switch[dst]
+            dstsw_name = self.topo.switches_openflow_names[dstsw]
+            dstport = self.topo.portmap[dstsw][dst]
             name = src + dst
 
             pathurl = self._get_config_path_url(name)
@@ -594,8 +596,8 @@ class Checker(object):
                 }]
             }))
 
-    def delete_pings(self, topo, pings):
-        for ping in pings:
+    def delete_pings(self):
+        for ping in self.pings:
             src = ping['source']
             dst = ping['destination']
             name = src + dst
@@ -611,17 +613,17 @@ class Checker(object):
             elineurl = self._get_config_eline_url(elinename)
             self._http_delete(elineurl)
 
-    def _test_pings(self, retries, retry_interval, topo, pings):
-        current_retries = retries
+    def _test_pings(self):
+        current_retries = self.retries
         while (current_retries > 0):
             current_retries = current_retries - 1
             pingfailed = False
-            for ping in pings:
+            for ping in self.pings:
                 src = ping['source']
                 dst = ping['destination']
-                dstip = topo.hosts_ip[dst]
+                dstip = self.topo.hosts_ip[dst]
 
-                output = topo.net.get(src).cmd('ping -c 1 {}'.format(dstip))
+                output = self.topo.net.get(src).cmd('ping -c 1 {}'.format(dstip))
                 # print "executed: {}".format(output)
                 if ' 1 received,' not in output:
                     print "ping failed from {} to {} ({})".format(src, dst, dstip)
@@ -632,44 +634,47 @@ class Checker(object):
             if not pingfailed:
                 return True
 
+            if current_retries > 0:
+                time.sleep(self.retry_interval)
             if current_retries == 0:
                 if self._ask_retry():
-                    current_retries = retries
+                    current_retries = self.retries
 
         return False
 
-    def _check_links(self, retries, retry_interval, expected_links):
+    def _check_links(self, expected_links):
         print "checking for expected number of links {}".format(expected_links)
-        current_retries = retries
+        current_retries = self.retries
         while (current_retries > 0):
             current_retries = current_retries - 1
             nodes, links = self._get_nodes_and_links('flow:1')
             srnodes, srlinks = self._get_nodes_and_links('flow:1:sr')
             if len(links) == expected_links and len(srlinks) == len(links):
                 return True
-            time.sleep(retry_interval)
+            time.sleep(self.retry_interval)
             if current_retries == 0:
                 if self._ask_retry():
-                    current_retries = retries
+                    current_retries = self.retries
         return False
 
-    def _check_nodes(self, retries, retry_interval, expected_nodes):
+    def _check_nodes(self, expected_nodes):
         print "checking for expected number of nodes {}".format(expected_nodes)
-        current_retries = retries
+        current_retries = self.retries
         while (current_retries > 0):
             current_retries = current_retries - 1
             nodes, links = self._get_nodes_and_links('flow:1')
             srnodes, srlinks = self._get_nodes_and_links('flow:1:sr')
             if len(nodes) == expected_nodes and len(nodes) == len(srnodes):
                 return True
-            time.sleep(retry_interval)
+            if current_retries > 0:
+                time.sleep(self.retry_interval)
             if current_retries == 0:
                 if self._ask_retry():
-                    current_retries = retries
+                    current_retries = self.retries
         return False
 
-    def _check_flows(self, retries, retry_interval, include_bsc=True):
-        current_retries = retries
+    def _check_flows(self):
+        current_retries = self.retries
         while (current_retries > 0):
             error_found = False
             current_retries = current_retries - 1
@@ -677,7 +682,7 @@ class Checker(object):
             sr_nodes = self._get_flow_group(self._get_config_bscopenflow())
             config_nodes = self._get_flow_group(self._get_config_openflow(), 0x1f)
             operational_nodes = self._get_flow_group(self._get_operational_openflow(), 0x1f)
-            if include_bsc:
+            if self.check_bsc:
                 for nodeid in sr_nodes:
                     node = sr_nodes[nodeid]
                     if 'flows' in node:
@@ -703,7 +708,7 @@ class Checker(object):
                         if nodeid not in operational_nodes or bscid not in operational_nodes[nodeid]['flowsbscids']:
                             print "ERROR: node {} flow {} not running".format(nodeid, flowid)
                             error_found = True
-                        elif include_bsc and (nodeid not in sr_nodes or flowid not in sr_nodes[nodeid]['flows']):
+                        elif self.check_bsc and (nodeid not in sr_nodes or flowid not in sr_nodes[nodeid]['flows']):
                             print "ERROR: node {} flow {} configured but not by fm".format(nodeid, flowid)
                             error_found = True
 
@@ -712,7 +717,7 @@ class Checker(object):
                         if nodeid not in operational_nodes or 'groups' not in operational_nodes[nodeid] or groupid not in operational_nodes[nodeid]['groups']:
                             print "ERROR: node {} group {} not running".format(nodeid, groupid)
                             error_found = True
-                        elif include_bsc and (nodeid not in sr_nodes or groupid not in sr_nodes[nodeid]['groups']):
+                        elif self.check_bsc and (nodeid not in sr_nodes or groupid not in sr_nodes[nodeid]['groups']):
                             print "ERROR: node {} group {} configured but not by fm".format(nodeid, groupid)
                             error_found = True
 
@@ -724,7 +729,7 @@ class Checker(object):
                         if nodeid not in config_nodes or bscid not in config_nodes[nodeid]['flowsbscids']:
                             print "ERROR: node {} flow {} running but not configured".format(nodeid, flowid)
                             error_found = True
-                        elif include_bsc and (nodeid not in sr_nodes or config_nodes[nodeid]['flowsbscids'][bscid] not in sr_nodes[nodeid]['flows']):
+                        elif self.check_bsc and (nodeid not in sr_nodes or config_nodes[nodeid]['flowsbscids'][bscid] not in sr_nodes[nodeid]['flows']):
                             print "ERROR: node {} flow {} running but not configured fm".format(nodeid, flowid)
                             error_found = True
 
@@ -733,16 +738,17 @@ class Checker(object):
                         if nodeid not in config_nodes or 'groups' not in config_nodes[nodeid] or groupid not in config_nodes[nodeid]['groups']:
                             print "ERROR: node {} group {} not running".format(nodeid, groupid)
                             error_found = True
-                        elif include_bsc and (nodeid not in sr_nodes or groupid not in sr_nodes[nodeid]['groups']):
+                        elif self.check_bsc and (nodeid not in sr_nodes or groupid not in sr_nodes[nodeid]['groups']):
                             print "ERROR: node {} group {} configured but not by fm".format(nodeid, groupid)
                             error_found = True
 
             if not error_found:
                 return True
-            time.sleep(retry_interval)
+            if current_retries > 0:
+                time.sleep(self.retry_interval)
             if current_retries == 0:
                 if self._ask_retry():
-                    current_retries = retries
+                    current_retries = self.retries
         return False
 
     def _ask_retry(self):

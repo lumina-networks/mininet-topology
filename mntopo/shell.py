@@ -1,6 +1,19 @@
+"""Mininet Topology Utility
+
+Usage:
+  mnyml [topology-file]
+  mnyml (-h | --help)
+
+Options:
+  -h --help     Show this screen.
+  --version     Show version.
+
+"""
+
 import os
 import sys
 import yaml
+from mntopo.docopt import docopt
 import mntopo.topo
 from mininet.log import setLogLevel, info, error
 from mininet.clean import cleanup
@@ -9,10 +22,12 @@ from mininet.clean import cleanup
 class Shell(object):
 
     def __init__(self):
+        arguments = docopt(__doc__, version='Mininet Topology Utility 1.0')
+
         setLogLevel('info')
         file = 'mn-topo.yml'
-        if len(sys.argv) > 1:
-            file = sys.argv[1]
+        if arguments['topology-file']:
+            file = arguments['topology-file']
 
         props = None
         if (os.path.isfile(file)):
@@ -21,12 +36,12 @@ class Shell(object):
 
         if props is None:
             print "ERROR: yml topology file not found"
-        else:
-            cleanup()
-            topo = mntopo.topo.Topo(props)
-            topo.start()
-            topo.cli()
-            topo.stop()
+            sys.exit()
+
+        topo = mntopo.topo.Topo(props)
+        topo.start()
+        topo.cli()
+        topo.stop()
 
 
 def main():
