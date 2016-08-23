@@ -29,7 +29,6 @@ class Shell(object):
 
     def __init__(self):
         arguments = docopt(__doc__, version='Flow Manager Tester 1.0')
-        print(arguments)
 
         setLogLevel('info')
         file = 'mn-topo.yml'
