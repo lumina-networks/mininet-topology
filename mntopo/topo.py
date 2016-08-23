@@ -152,6 +152,8 @@ class Topo(object):
     def get_nodes_flows_groups(self, prefix=None):
         nodes = {}
         for name in self.switches_openflow_names:
+            if not exists_bridge(name):
+                continue
             oname = self.switches_openflow_names[name]
             nodes[oname] = {'cookies': [], 'groups': [],'bscids':{}}
             output = subprocess.check_output(
