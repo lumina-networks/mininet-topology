@@ -672,7 +672,10 @@ class Checker(object):
             if current_retries > 0:
                 time.sleep(self.retry_interval)
             if current_retries == 0:
-                if self._ask_retry():
+                retry, ignore = self._ask_retry()
+                if ignore:
+                    return True
+                if retry:
                     current_retries = self.retries
 
         return False
@@ -688,8 +691,12 @@ class Checker(object):
                 return True
             time.sleep(self.retry_interval)
             if current_retries == 0:
-                if self._ask_retry():
+                retry, ignore = self._ask_retry()
+                if ignore:
+                    return True
+                if retry:
                     current_retries = self.retries
+
         return False
 
     def _check_nodes(self, expected_nodes):
@@ -704,8 +711,12 @@ class Checker(object):
             if current_retries > 0:
                 time.sleep(self.retry_interval)
             if current_retries == 0:
-                if self._ask_retry():
+                retry, ignore = self._ask_retry()
+                if ignore:
+                    return True
+                if retry:
                     current_retries = self.retries
+
         return False
 
     def _check_flows(self):
@@ -753,7 +764,6 @@ class Checker(object):
                         elif node['flows'][flowid]['cookie'] not in ovs_flows_groups[nodeid]['cookies']:
                             print "WARNING: node {} flow {} configured in OVS but not running same version".format(nodeid, flowid)
 
-
                 if 'groups' in node:
                     for groupid in node['groups']:
                         if nodeid not in operational_nodes or 'groups' not in operational_nodes[nodeid] or groupid not in operational_nodes[nodeid]['groups']:
@@ -765,7 +775,6 @@ class Checker(object):
                         elif nodeid not in ovs_flows_groups or groupid not in ovs_flows_groups[nodeid]['groups']:
                             print "ERROR: node {} group {} configured but not in OVS".format(nodeid, groupid)
                             error_found = True
-
 
             for nodeid in operational_nodes:
                 node = operational_nodes[nodeid]
@@ -813,17 +822,24 @@ class Checker(object):
             if current_retries > 0:
                 time.sleep(self.retry_interval)
             if current_retries == 0:
-                if self._ask_retry():
+                retry, ignore = self._ask_retry()
+                if ignore:
+                    return True
+                if retry:
                     current_retries = self.retries
+
         return False
 
     def _ask_retry(self):
+        var = raw_input("Do you want to ignore current error? yes/no:")
+        print "you entered", var
+        if 'yes' == var:
+            return False, True
         var = raw_input("Do you want to retry? yes/no:")
         print "you entered", var
         if 'yes' == var:
-            return True
-        else:
-            return False
+            return True, False
+        return False, False
 
 
 def get_property(props, name, default_value=None):
@@ -833,12 +849,14 @@ def get_property(props, name, default_value=None):
             return value
     return default_value
 
+
 def append_calculated_flow_nodes(nodes, cnodes):
     if cnodes is not None:
         cnodes = cnodes.get('calculated-flow-node')
         if cnodes is not None:
             for cnode in cnodes:
                 append_calculated_flows(nodes, cnode.get('calculated-flows'))
+
 
 def append_calculated_flows(nodes, flows):
     if flows is not None:
