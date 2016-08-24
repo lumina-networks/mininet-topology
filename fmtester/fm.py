@@ -462,12 +462,15 @@ class Checker(object):
         for nodeid in os.listdir(nodesdir):
             nodedir = nodesdir + '/' + nodeid
             groupsdir = nodedir + '/groups'
+            if not os.path.exists(groupsdir):
+                continue
             for groupid in os.listdir(groupsdir):
                 groupfile = groupsdir + '/' + groupid
                 with open(groupfile) as data_file:
                     data = json.dumps({
                         "flow-node-inventory:group": [json.load(data_file)]
                     })
+                    print "CONFIGURING group: {}".format(groupfile)
                     resp = self._http_put(self._get_config_group_url(nodeid, groupid), data)
                     if resp is None or resp.status_code != 200:
                         print "ERROR putting {}".format(groupfile)
@@ -478,9 +481,15 @@ class Checker(object):
         time.sleep(10)
         nodesdir = self.servicesdir + '/nodes'
         print "configuring flows for {}".format(os.listdir(nodesdir))
+        if not os.path.exists(nodesdir):
+            return
+
         for nodeid in os.listdir(nodesdir):
             nodedir = nodesdir + '/' + nodeid
             tablesdir = nodedir + '/tables'
+            if not os.path.exists(tablesdir):
+                continue
+
             for tableid in os.listdir(tablesdir):
                 tabledir = tablesdir + '/' + tableid
                 flowsdir = tabledir + '/flows'
@@ -490,7 +499,8 @@ class Checker(object):
                         data = json.dumps({
                             "flow-node-inventory:flow": [json.load(data_file)]
                         })
-                        self._http_put(self._get_config_flow_url(nodeid, tableid, flowid), data)
+                        print "CONFIGURING flow: {}".format(flowfile)
+                        resp = self._http_put(self._get_config_flow_url(nodeid, tableid, flowid), data)
                         if resp is None or resp.status_code != 200:
                             print "ERROR putting {}".format(flowfile)
                             print self._get_config_flow_url(nodeid, tableid, flowid)
