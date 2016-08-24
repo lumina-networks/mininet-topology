@@ -4,6 +4,8 @@ This tools provides a mechanism to quickly create a Mininet network based on a y
 
 - [Install](#install)
 - [Usage](#usage)
+  - [Mininet topology](mininet-topology)
+  - [Flow Manager tester](flow-manager-tester)
 - [Topology YAML](#topology-yaml)
 
 ## Install
@@ -31,15 +33,17 @@ Execute either `sudo mnyml [topology-file-name]` to create a topology based on g
 
 ### Flow Manager tester
 
-Flow Manager tester test if the flows and services runs properly on the given topology. It makes following tasks:
+Flow Manager tester checks if flows, groups and services runs properly on the given topology. It makes following tasks:
 
-* starts given Mininet topology
+* cleanup any previous Mininet network using Mininet `cleanup` method
+* starts a Mininet network based on give YAML topology
 * configure an eline/path sr services for each given pair of hosts
-* checks SDN controller discover all nodes and links properly
-* checks if flows are generated properly
-* check if the pings works between each pair of hosts for given services
-* checks if SR calculcated flows and groups are consistent
-* stops Mininet and check if all flows are removed
+* checks if SDN controller has discovered all nodes and links properly
+* checks if pings works between each pair of hosts for given services
+* checks if flows are generated properly. Checking if all flows in OVS switches, Openflow model (configuration and operational) and Flow Manager models are in sync. For OVS switches pulls the information using `dump-flows` and `dump-groups` command. For the rest it uses BSC REST API.
+* stops Mininet and executes Mininet `cleanup` method
+* check if all nodes and links are removed
+* check if all flows are removed properly from Openflow and FlowManager model.
 * repeats previous steps as a loop
 
 Execute either `sudo mnfm [topology-file-name]`
