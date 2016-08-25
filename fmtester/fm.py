@@ -756,6 +756,9 @@ class Checker(object):
                             if nodeid not in config_nodes or groupid not in config_nodes[nodeid]['groups']:
                                 print "ERROR: node {} group {} not configured".format(nodeid, groupid)
                                 error_found = True
+                            if nodeid not in calculated_nodes or groupid not in calculated_nodes[nodeid]['groups']:
+                                print "ERROR: node {} group {} not in calculated groups".format(nodeid, groupid)
+                                error_found = True
 
             for nodeid in config_nodes:
                 node = config_nodes[nodeid]
@@ -794,7 +797,7 @@ class Checker(object):
                         if nodeid not in config_nodes or bscid not in config_nodes[nodeid]['flowsbscids']:
                             print "ERROR: node {} flow {} running but not configured".format(nodeid, flowid)
                             error_found = True
-                        if self.check_bsc and (nodeid not in sr_nodes or config_nodes[nodeid]['flowsbscids'][bscid] not in sr_nodes[nodeid]['flows']):
+                        if self.check_bsc and (nodeid not in config_nodes or config_nodes[nodeid]['flowsbscids'][bscid] not in sr_nodes[nodeid]['flows']):
                             print "ERROR: node {} flow {} running but not configured fm".format(nodeid, flowid)
                             error_found = True
 
