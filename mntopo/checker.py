@@ -19,12 +19,12 @@ class Checker(object):
         self.props = props
         self.topo = mntopo.topo.Topo(self.props)
 
-        self.fmprops = props.get('fm')
-        fmprops = self.fmprops
-        if self.fmprops is None:
-            fmprops = {}
+        self.testprops = props.get('test')
+        testprops = self.testprops
+        if self.testprops is None:
+            testprops = {}
 
-        self.servicesdir = get_property(fmprops, 'servicesdir', 'fmservices')
+        self.servicesdir = get_property(testprops, 'servicesdir', 'services')
         self.servicesdirExists = False
 
         contrl = None
@@ -39,21 +39,22 @@ class Checker(object):
         self.password = get_property(contrl, 'password', 'admin')
         self.timeout = get_property(contrl, 'timeout', 60000)
 
-        self.loop = get_property(self.fmprops, 'loop', True)
-        self.loop_interval = get_property(self.fmprops, 'loop_interval', 0)
-        self.loop_max = get_property(self.fmprops, 'loop_max', 2)
+        self.loop = get_property(self.testprops, 'loop', True)
+        self.loop_interval = get_property(self.testprops, 'loop_interval', 0)
+        self.loop_max = get_property(self.testprops, 'loop_max', 2)
 
-        self.retries = get_property(self.fmprops, 'retries', 60)
-        self.retry_interval = get_property(self.fmprops, 'retry_interval', 5)
-        self.check_links = get_property(self.fmprops, 'check_links', True)
-        self.check_nodes = get_property(self.fmprops, 'check_nodes', True)
-        self.check_flows = get_property(self.fmprops, 'check_flows', True)
-        self.check_bsc = get_property(self.fmprops, 'check_bsc', True)
-        self.recreate_services = get_property(self.fmprops, 'recreate_services', True)
-        self.pings = get_property(self.fmprops, 'ping', None)
+        self.retries = get_property(self.testprops, 'retries', 60)
+        self.retry_interval = get_property(self.testprops, 'retry_interval', 5)
+        self.check_links = get_property(self.testprops, 'check_links', True)
+        self.check_nodes = get_property(self.testprops, 'check_nodes', True)
+        self.check_flows = get_property(self.testprops, 'check_flows', True)
+        self.force_pings = get_property(self.testprops, 'force_pings', False)
+        self.pings = get_property(self.testprops, 'ping', None)
+
+    def test(self):
 
         # if pings not provided let's just create ours
-        if self.pings is None and self.check_bsc:
+        if self.pings is None and self.force_pings:
             self.pings = []
             current = None
             for name in sorted(self.topo.hosts):
@@ -65,18 +66,12 @@ class Checker(object):
                     self.pings.append(current)
                     current = None
 
-    def test(self):
-
-        first_iteration = True
         current_loop = self.loop_max
         while self.loop_max <= 0 or current_loop > 0:
             if current_loop > 0:
                 current_loop = current_loop - 1
 
-            if first_iteration or self.recreate_services:
-                first_iteration = False
-                self.create_pings()
-
+            self.delete()
             self.topo.start()
 
             t = time.time()
@@ -90,6 +85,8 @@ class Checker(object):
                 if not self._check_nodes(self.topo.number_of_switches):
                     self.topo.stop()
                     return
+
+            self.put()
 
             print "links and nodes detected in {} seconds".format(round((time.time() - t), 3))
 
@@ -105,8 +102,8 @@ class Checker(object):
                     return
 
             self.counter()
-            if self.recreate_services:
-                self.delete_pings()
+
+            self.delete()
 
             if not self.loop:
                 self.topo.stop()
@@ -144,12 +141,6 @@ class Checker(object):
     def _get_operational_url(self):
         return self._get_base_url() + '/operational'
 
-    def _get_config_bscopenflow(self):
-        return self._get_config_url() + '/brocade-bsc-openflow:nodes'
-
-    def _get_operational_bscopenflow(self):
-        return self._get_operational_url() + '/brocade-bsc-openflow:nodes'
-
     def _get_config_openflow(self):
         return self._get_config_url() + '/opendaylight-inventory:nodes'
 
@@ -167,24 +158,6 @@ class Checker(object):
 
     def _get_operational_group_url(self, node, group):
         return self._get_operational_openflow() + '/node/{}/group/{}'.format(node, str(group))
-
-    def _get_config_bscflow_url(self, node, table, flow):
-        return self._get_config_bscopenflow() + '/node/{}/table/{}/flow/{}'.format(node, str(table), flow)
-
-    def _get_operational_bscflow_url(self, node, table, flow):
-        return self._get_operational_bscopenflow() + '/node/{}/table/{}/flow/{}'.format(node, str(table), flow)
-
-    def _get_config_bscgroup_url(self, node, group):
-        return self._get_config_bscopenflow() + '/node/{}/group/{}'.format(node, str(group))
-
-    def _get_operational_bscgroup_url(self, node, group):
-        return self._get_operational_bscopenflow() + '/node/{}/group/{}'.format(node, str(group))
-
-    def _get_config_eline_url(self, name):
-        return self._get_config_url() + '/brocade-bsc-eline:elines/eline/{}'.format(name)
-
-    def _get_config_path_url(self, name):
-        return self._get_config_url() + '/brocade-bsc-path:paths/path/{}'.format(name)
 
     def _http_get(self, url):
         return requests.get(url,
@@ -268,70 +241,6 @@ class Checker(object):
         print "Topology {} has {} nodes and {} links. {} ".format(topology_name, len(nodelist), len(linklist), nodelist.keys())
         return nodelist, linklist
 
-    def _get_calculated_flows_groups(self):
-        srnodes = {}
-        resp = self._http_get(self._get_operational_url() + '/network-topology:network-topology/topology/flow:1:sr')
-        if resp is not None and resp.status_code == 200 and resp.content is not None:
-            data = json.loads(resp.content)
-            topology = data.get('topology')
-            nodes = None
-            if topology is not None and len(topology) > 0:
-                nodes = topology[0].get('node')
-                if nodes is not None:
-                    for node in nodes:
-                        nodeid = node['node-id']
-                        srnodes[nodeid] = {'groups': [], 'flows': []}
-                        brocadesr = node.get('brocade-bsc-sr:sr')
-                        groups = None
-                        if brocadesr is not None:
-                            groups = brocadesr.get('calculated-groups')
-                        if groups is not None:
-                            cgroups = groups.get('calculated-group')
-                            if cgroups is not None:
-                                for group in cgroups:
-                                    srnodes[nodeid]['groups'].append(group['group-id'])
-
-                        flows = None
-                        if brocadesr is not None:
-                            append_calculated_flows(srnodes, brocadesr.get('calculated-flows'))
-
-        resp = self._http_get(self._get_operational_url() + '/brocade-bsc-path:paths')
-        if resp is not None and resp.status_code == 200 and resp.content is not None:
-            data = json.loads(resp.content)
-            if data.get('paths') is not None:
-                paths = data.get('paths')
-                if paths.get('path') is not None:
-                    for path in paths.get('path'):
-                        append_calculated_flows(srnodes, path.get('calculated-flows'))
-
-                if paths.get('mpls-nodes') is not None:
-                    append_calculated_flow_nodes(srnodes, paths.get('mpls-nodes').get('calculated-flow-nodes'))
-
-        resp = self._http_get(self._get_operational_url() + '/brocade-bsc-eline:elines')
-        if resp is not None and resp.status_code == 200 and resp.content is not None:
-            data = json.loads(resp.content)
-            if data.get('elines') is not None:
-                elines = data.get('elines')
-                if elines.get('eline') is not None:
-                    for eline in elines.get('eline'):
-                        append_calculated_flows(srnodes, eline.get('calculated-flows'))
-
-        resp = self._http_get(self._get_operational_url() + '/brocade-bsc-path-mpls:mpls-nodes')
-        if resp is not None and resp.status_code == 200 and resp.content is not None:
-            data = json.loads(resp.content)
-            mpls_nodes = data.get('mpls-nodes')
-            if mpls_nodes is not None:
-                append_calculated_flow_nodes(srnodes, mpls_nodes.get('calculated-flow-nodes'))
-
-        resp = self._http_get(self._get_operational_url() + '/brocade-bsc-eline-mpls:eline-nodes')
-        if resp is not None and resp.status_code == 200 and resp.content is not None:
-            data = json.loads(resp.content)
-            mpls_nodes = data.get('eline-nodes')
-            if mpls_nodes is not None:
-                append_calculated_flow_nodes(srnodes, mpls_nodes.get('calculated-flow-nodes'))
-
-        return srnodes
-
     def counter(self):
         nodecounter = {}
         print "Couting all flows and groups ..."
@@ -384,12 +293,10 @@ class Checker(object):
         for node in data['nodes']['node']:
             nodeid = node['id']
             flows = {}
-            flowsbscids = {}
             cookies = {}
             groups = {}
             nodes[nodeid] = {
                 'flows': flows,
-                'flowsbscids': flowsbscids,
                 'groups': groups,
                 'cookies': cookies
             }
@@ -418,9 +325,6 @@ class Checker(object):
                             elif 'cookie' in flow:
                                 cookie = flow.get('cookie')
                                 if cookie >> 56 == prefix:
-                                    flow['bscversion'] = (cookie & 0x00000000FF000000) >> 24
-                                    flow['bscid'] = (cookie & 0x00FFFFFF00000000) >> 32
-                                    flowsbscids[flow['bscid']] = flowid
                                     flows[flowid] = flow
 
         return nodes
@@ -641,24 +545,10 @@ class Checker(object):
                 }]
             }))
 
-    def delete_pings(self):
-        for ping in self.pings:
-            src = ping['source']
-            dst = ping['destination']
-            name = src + dst
-
-            pathurl = self._get_config_path_url(name)
-            self._http_delete(pathurl)
-
-            elinename = name + '-arp'
-            elineurl = self._get_config_eline_url(elinename)
-            self._http_delete(elineurl)
-
-            elinename = name + '-ip'
-            elineurl = self._get_config_eline_url(elinename)
-            self._http_delete(elineurl)
-
     def _test_pings(self):
+        if self.pings is None:
+            return True
+
         current_retries = self.retries
         while (current_retries > 0):
             current_retries = current_retries - 1
@@ -696,8 +586,7 @@ class Checker(object):
         while (current_retries > 0):
             current_retries = current_retries - 1
             nodes, links = self._get_nodes_and_links('flow:1')
-            srnodes, srlinks = self._get_nodes_and_links('flow:1:sr')
-            if len(links) == expected_links and len(srlinks) == len(links):
+            if len(links) == expected_links:
                 return True
             time.sleep(self.retry_interval)
             if current_retries == 0:
@@ -715,8 +604,7 @@ class Checker(object):
         while (current_retries > 0):
             current_retries = current_retries - 1
             nodes, links = self._get_nodes_and_links('flow:1')
-            srnodes, srlinks = self._get_nodes_and_links('flow:1:sr')
-            if len(nodes) == expected_nodes and len(nodes) == len(srnodes):
+            if len(nodes) == expected_nodes:
                 return True
             if current_retries > 0:
                 time.sleep(self.retry_interval)
@@ -735,44 +623,15 @@ class Checker(object):
             error_found = False
             current_retries = current_retries - 1
             ovs_flows_groups = self.topo.get_nodes_flows_groups(0x1f)
-            calculated_nodes = self._get_calculated_flows_groups()
-            sr_nodes = self._get_flow_group(self._get_config_bscopenflow())
             config_nodes = self._get_flow_group(self._get_config_openflow(), 0x1f)
             operational_nodes = self._get_flow_group(self._get_operational_openflow(), 0x1f)
-            if self.check_bsc:
-                for nodeid in sr_nodes:
-                    node = sr_nodes[nodeid]
-                    if 'flows' in node:
-                        for flowid in node['flows']:
-                            if nodeid not in config_nodes or flowid not in config_nodes[nodeid]['flows']:
-                                print "ERROR: node {} flow {} not configured".format(nodeid, flowid)
-                                error_found = True
-                            if nodeid not in calculated_nodes or flowid not in calculated_nodes[nodeid]['flows']:
-                                print "ERROR: node {} flow {} not in calculated flows".format(nodeid, flowid)
-                                error_found = True
-
-                    if 'groups' in node:
-                        for groupid in node['groups']:
-                            if nodeid not in config_nodes or groupid not in config_nodes[nodeid]['groups']:
-                                print "ERROR: node {} group {} not configured".format(nodeid, groupid)
-                                error_found = True
-                            if nodeid not in calculated_nodes or groupid not in calculated_nodes[nodeid]['groups']:
-                                print "ERROR: node {} group {} not in calculated groups".format(nodeid, groupid)
-                                error_found = True
 
             for nodeid in config_nodes:
                 node = config_nodes[nodeid]
                 if 'flows' in node:
                     for flowid in node['flows']:
-                        bscid = node['flows'][flowid]['bscid']
-                        if nodeid not in operational_nodes or bscid not in operational_nodes[nodeid]['flowsbscids']:
-                            print "ERROR: node {} flow {} not running".format(nodeid, flowid)
-                            error_found = True
-                        if self.check_bsc and (nodeid not in sr_nodes or flowid not in sr_nodes[nodeid]['flows']):
-                            print "ERROR: node {} flow {} configured but not by fm".format(nodeid, flowid)
-                            error_found = True
-                        if nodeid not in ovs_flows_groups or bscid not in ovs_flows_groups[nodeid]['bscids']:
-                            print "ERROR: node {} flow {} configured but not in OVS switch".format(nodeid, flowid)
+                        if nodeid not in operational_nodes or flowid not in operational_nodes[nodeid]['flows']:
+                            print "ERROR: node {} flow {} not running, not found in operational data store".format(nodeid, flowid)
                             error_found = True
                         elif node['flows'][flowid]['cookie'] not in ovs_flows_groups[nodeid]['cookies']:
                             print "WARNING: node {} flow {} configured in OVS but not running same version".format(nodeid, flowid)
@@ -782,9 +641,6 @@ class Checker(object):
                         if nodeid not in operational_nodes or 'groups' not in operational_nodes[nodeid] or groupid not in operational_nodes[nodeid]['groups']:
                             print "ERROR: node {} group {} not running".format(nodeid, groupid)
                             error_found = True
-                        if self.check_bsc and (nodeid not in sr_nodes or groupid not in sr_nodes[nodeid]['groups']):
-                            print "ERROR: node {} group {} configured but not by fm".format(nodeid, groupid)
-                            error_found = True
                         if nodeid not in ovs_flows_groups or groupid not in ovs_flows_groups[nodeid]['groups']:
                             print "ERROR: node {} group {} configured but not in OVS".format(nodeid, groupid)
                             error_found = True
@@ -793,41 +649,22 @@ class Checker(object):
                 node = operational_nodes[nodeid]
                 if 'flows' in node:
                     for flowid in node['flows']:
-                        bscid = node['flows'][flowid]['bscid']
-                        if nodeid not in config_nodes or bscid not in config_nodes[nodeid]['flowsbscids']:
+                        if nodeid not in config_nodes or flowid not in config_nodes[nodeid]['flows']:
                             print "ERROR: node {} flow {} running but not configured".format(nodeid, flowid)
-                            error_found = True
-                        if self.check_bsc and (nodeid not in config_nodes or config_nodes[nodeid]['flowsbscids'][bscid] not in sr_nodes[nodeid]['flows']):
-                            print "ERROR: node {} flow {} running but not configured fm".format(nodeid, flowid)
                             error_found = True
 
                 if 'groups' in node:
                     for groupid in node['groups']:
-                        if nodeid not in config_nodes or 'groups' not in config_nodes[nodeid] or groupid not in config_nodes[nodeid]['groups']:
+                        if nodeid not in config_nodes or groupid not in config_nodes[nodeid]['groups']:
                             print "ERROR: node {} group {} running but not configured".format(nodeid, groupid)
-                            error_found = True
-                        if self.check_bsc and (nodeid not in sr_nodes or groupid not in sr_nodes[nodeid]['groups']):
-                            print "ERROR: node {} group {} running but not configured in fm".format(nodeid, groupid)
                             error_found = True
 
             for nodeid in ovs_flows_groups:
                 node = ovs_flows_groups[nodeid]
-                if 'bscids' in node:
-                    for bscid in node['bscids']:
-                        if nodeid not in config_nodes or bscid not in config_nodes[nodeid]['flowsbscids']:
-                            print "ERROR: node {} flow {} running in OVS but not configured".format(nodeid, flowid)
-                            error_found = True
-                        if self.check_bsc and (nodeid not in sr_nodes or config_nodes[nodeid]['flowsbscids'][bscid] not in sr_nodes[nodeid]['flows']):
-                            print "ERROR: node {} flow {} running in OVS but not configured in fm".format(nodeid, flowid)
-                            error_found = True
-
                 if 'groups' in node:
                     for groupid in node['groups']:
-                        if nodeid not in config_nodes or 'groups' not in config_nodes[nodeid] or groupid not in config_nodes[nodeid]['groups']:
+                        if nodeid not in config_nodes or groupid not in config_nodes[nodeid]['groups']:
                             print "ERROR: node {} group {} running in OVS but not configured".format(nodeid, groupid)
-                            error_found = True
-                        if self.check_bsc and (nodeid not in sr_nodes or groupid not in sr_nodes[nodeid]['groups']):
-                            print "ERROR: node {} group {} running in OVS but not in fm".format(nodeid, groupid)
                             error_found = True
 
             if not error_found:
@@ -863,21 +700,8 @@ def get_property(props, name, default_value=None):
     return default_value
 
 
-def append_calculated_flow_nodes(nodes, cnodes):
-    if cnodes is not None:
-        cnodes = cnodes.get('calculated-flow-node')
-        if cnodes is not None:
-            for cnode in cnodes:
-                append_calculated_flows(nodes, cnode.get('calculated-flows'))
+def main():
+    Checker()
 
-
-def append_calculated_flows(nodes, flows):
-    if flows is not None:
-        cflows = flows.get('calculated-flow')
-        if cflows is not None:
-            for flow in cflows:
-                flowid = 'table/{}/flow/{}'.format(flow['table-id'], flow['flow-name'])
-                nodeid = flow['node-id']
-                if nodeid not in nodes:
-                    nodes[nodeid] = {'groups': [], 'flows': []}
-                nodes[nodeid]['flows'].append(flowid)
+if __name__ == "__main__":
+    Checker()

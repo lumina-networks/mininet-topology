@@ -86,7 +86,7 @@ switch:
   name: s303
   protocols: OpenFlow13
 
-fm:
+test:
   ping:
     - source: h101
       destination: h104
@@ -99,4 +99,4 @@ fm:
   check_nodes: True
   check_flows: True
   recreate_services: False
-  servicesdir: 'fmservices'
+  servicesdir: 'services'

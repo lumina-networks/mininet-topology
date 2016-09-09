@@ -18,6 +18,7 @@ setup(
     entry_points={
         'console_scripts': [
             'mnyml = mntopo.shell:main',
+            'mntest = mntopo.checkershell:main',
             'mnfm = fmtester.shell:main',
             'topodc = mntopo.topodatacenter:main',
             'topotb = mntopo.topotable:main'

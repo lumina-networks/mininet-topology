@@ -76,7 +76,7 @@ fm:
   check_nodes: True
   check_flows: True
   recreate_services: False
-  servicesdir: 'fmservices'
+  servicesdir: 'services'
 ```
 
 ### Topology generators
