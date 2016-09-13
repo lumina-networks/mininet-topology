@@ -331,6 +331,8 @@ class Checker(object):
                                 cookie = flow.get('cookie')
                                 if cookie >> 56 == prefix:
                                     flows[flowid] = flow
+                                elif flow['id'].startswith("fm"):
+                                    flows[flowid] = flow
 
         return nodes
 
@@ -381,7 +383,7 @@ class Checker(object):
                     })
                     print "CONFIGURING group: {}".format(groupfile)
                     resp = self._http_put(self._get_config_group_url(nodeid, groupid), data)
-                    if resp is None or resp.status_code != 200:
+                    if resp is None or (resp.status_code != 200 and resp.status_code != 201):
                         print "ERROR putting {}".format(groupfile)
                         print data
                         print resp.content
@@ -410,7 +412,7 @@ class Checker(object):
                         })
                         print "CONFIGURING flow: {}".format(flowfile)
                         resp = self._http_put(self._get_config_flow_url(nodeid, tableid, flowid), data)
-                        if resp is None or resp.status_code != 200:
+                        if resp is None or (resp.status_code != 200 and resp.status_code != 201):
                             print "ERROR putting {}".format(flowfile)
                             print self._get_config_flow_url(nodeid, tableid, flowid)
                             print data
