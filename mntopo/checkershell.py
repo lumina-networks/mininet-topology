@@ -1,8 +1,8 @@
 """Mininet Topology Tester.
 
 Usage:
-  mntest [--topology=FILE] [--loops=LOOPS] [--no-loop] [--retries=RETRY] [--interval=SEC] [--force-pings]
-  mntest test [--topology=FILE] [--loops=LOOPS] [--no-loop] [--retries=RETRY] [--interval=SEC] [--force-pings]
+  mntest [--topology=FILE] [--loops=LOOPS] [--no-loop] [--retries=RETRY] [--interval=SEC] [--force-pings] [--delay=SEC]
+  mntest test [--topology=FILE] [--loops=LOOPS] [--no-loop] [--retries=RETRY] [--interval=SEC] [--force-pings] [--delay=SEC]
   mntest links [-s] [--topology=FILE]
   mntest nodes [-s] [--topology=FILE]
   mntest flows [-s] [--topology=FILE]
@@ -16,6 +16,7 @@ Options:
   --version         Show version.
   -s --stopped      If Mininet is not running.
   --no-loop         No loop in case of test.
+  --delay=SEC       Number of seconds after successful test and before stopping services and network.
   --loops=LOOPS     Maximum number of loops.
   --topology=FILE   Topolofy file name [default: mn-topo.yml].
   --dir=DIR         Directory name to read/save flows [default: services].
@@ -55,6 +56,8 @@ class Shell(object):
 
         if arguments['--no-loop']:
             checker.loop = False
+        if arguments['--delay']:
+            checker.delay = int(arguments['--delay'])
         if arguments['--loops']:
             checker.loop_max = int(arguments['--loops'])
         if arguments['--dir']:

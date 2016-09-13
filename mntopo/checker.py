@@ -39,6 +39,8 @@ class Checker(object):
         self.password = get_property(contrl, 'password', 'admin')
         self.timeout = get_property(contrl, 'timeout', 60000)
 
+        self.delay = get_property(self.testprops, 'delay', 0)
+
         self.loop = get_property(self.testprops, 'loop', True)
         self.loop_interval = get_property(self.testprops, 'loop_interval', 0)
         self.loop_max = get_property(self.testprops, 'loop_max', 2)
@@ -103,13 +105,16 @@ class Checker(object):
 
             self.counter()
 
+            if self.delay > 0:
+                time.sleep(self.delay)
+
             self.delete()
 
             if not self.loop:
                 self.topo.stop()
                 break
             if self.loop_interval > 0:
-                time.sleep(loop_interval)
+                time.sleep(self.loop_interval)
 
             print "stopping mininet"
             self.topo.stop()

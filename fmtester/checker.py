@@ -62,6 +62,9 @@ class Checker(mntopo.checker.Checker):
 
             print "ping worked after {} seconds".format(round((time.time() - t), 3))
 
+            if self.delay > 0:
+                time.sleep(self.delay)
+
             if self.check_flows:
                 if not self._check_flows():
                     self.topo.stop()
@@ -76,7 +79,7 @@ class Checker(mntopo.checker.Checker):
                 self.topo.stop()
                 break
             if self.loop_interval > 0:
-                time.sleep(loop_interval)
+                time.sleep(self.loop_interval)
 
             print "stopping mininet"
             self.topo.stop()
