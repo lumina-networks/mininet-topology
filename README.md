@@ -31,7 +31,9 @@ The dependencies to run this tools are
 
 Execute either `sudo mnyml [topology-file-name]` to create a topology based on given topology file. This scripts command just starts a Mininet topology using OVS switches.
 
-### Flow Manager tester
+### Test utility
+
+This tool provides two tester utilites `mntest` and `mnfm`. The options are very similar and the main difference is `mntest` will configure the flows/groups for the given directory. `mnfm` will create automatically eline services and check if these services works.
 
 Flow Manager tester checks if flows, groups and services runs properly on the given topology. It makes following tasks:
 
@@ -46,7 +48,7 @@ Flow Manager tester checks if flows, groups and services runs properly on the gi
 * check if all flows are removed properly from Openflow and FlowManager model.
 * repeats previous steps as a loop
 
-Execute either `sudo mnfm [topology-file-name]`
+Execute either `sudo mnfm [topology-file-name]` or `sudo mntest [topology-file-name]`
 
 Following are the attributes that can be added to the topology yaml file to include Flow Manager testing capabilities.
 
@@ -63,7 +65,7 @@ Following are the attributes that can be added to the topology yaml file to incl
 * **servicesdir**: a directory where this solution can save and recover flows and groups configuration
 
 ```
-fm:
+test:
   ping:
     - source: h101
       destination: h104
