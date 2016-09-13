@@ -62,15 +62,15 @@ class Checker(mntopo.checker.Checker):
 
             print "ping worked after {} seconds".format(round((time.time() - t), 3))
 
-            if self.delay > 0:
-                time.sleep(self.delay)
-
             if self.check_flows:
                 if not self._check_flows():
                     self.topo.stop()
                     return
 
             self.counter()
+
+            if self.delay > 0:
+                time.sleep(self.delay)
 
             if self.recreate_services:
                 self.delete_pings()
