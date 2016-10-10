@@ -1,11 +1,12 @@
 """Mininet Topology Utility
 
 Usage:
-  mnyml [topology-file]
+  mnyml [--topology=FILE]
   mnyml (-h | --help)
 
 Options:
   -h --help     Show this screen.
+  --topology=FILE   Topolofy file name [default: mn-topo.yml].
   --version     Show version.
 
 """
@@ -25,8 +26,8 @@ class Shell(object):
 
         setLogLevel('info')
         file = 'mn-topo.yml'
-        if arguments['topology-file']:
-            file = arguments['topology-file']
+        if arguments['--topology']:
+            file = arguments['--topology']
 
         props = None
         if (os.path.isfile(file)):

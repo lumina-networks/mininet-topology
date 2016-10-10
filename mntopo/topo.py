@@ -138,7 +138,7 @@ class Topo(object):
 
         for interface in self.props['interface']:
             name = interface['name']
-            interfaces[name] = Intf(name, node=net.nameToNode[interface['switch']])
+            self.interfaces[name] = Intf(name, node=self.net.nameToNode[interface['switch']])
 
         self.net.start()
 
