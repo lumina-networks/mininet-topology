@@ -37,6 +37,7 @@ class Topo(object):
         interfaces = self.interfaces
 
         self.portmap = {}
+        self.openflowportmap = {}
         self.host_connected_switch = {}
         self.number_of_swiches_links = 0
         self.number_of_switches = 0
@@ -107,10 +108,16 @@ class Topo(object):
             if src not in self.portmap:
                 self.portmap[src] = {}
             self.portmap[src][dst] = src_port
+            if src in self.switches and dst in self.switches:
+                self.openflowportmap[self.switches_openflow_names[src] +
+                                     ':' + str(src_port)] = self.switches_openflow_names[dst]
 
             if dst not in self.portmap:
                 self.portmap[dst] = {}
             self.portmap[dst][src] = dst_port
+            if dst in self.switches and src in self.switches:
+                self.openflowportmap[self.switches_openflow_names[dst] +
+                                     ':' + str(dst_port)] = self.switches_openflow_names[src]
 
             # skip connections between hosts
             if src in self.hosts and dst in self.hosts:
@@ -155,7 +162,7 @@ class Topo(object):
             if not exists_bridge(name):
                 continue
             oname = self.switches_openflow_names[name]
-            nodes[oname] = {'cookies': [], 'groups': [],'bscids':{}}
+            nodes[oname] = {'cookies': [], 'groups': [], 'bscids': {}}
             output = subprocess.check_output(
                 "sudo ovs-ofctl dump-groups {} --protocol=Openflow13".format(name), shell=True)
             pattern = r'group_id=(\d+)'
@@ -174,7 +181,7 @@ class Topo(object):
                     continue
                 if number >> 56 == prefix:
                     bscid = (number & 0x00FFFFFF00000000) >> 32
-                    nodes[oname]['bscids'][bscid]= {
+                    nodes[oname]['bscids'][bscid] = {
                         'cookie': number,
                         'version': (number & 0x00000000FF000000) >> 24
                     }

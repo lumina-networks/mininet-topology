@@ -52,6 +52,7 @@ class Checker(object):
         self.check_flows = get_property(self.testprops, 'check_flows', True)
         self.force_pings = get_property(self.testprops, 'force_pings', False)
         self.pings = get_property(self.testprops, 'ping', None)
+        self.ask_for_retry = get_property(self.testprops, 'ask_for_retry', False)
 
     def test(self):
 
@@ -79,14 +80,14 @@ class Checker(object):
             t = time.time()
 
             if self.check_links:
-                if not self._check_links(self.topo.number_of_swiches_links):
+                if not self._check_links():
                     self.topo.stop()
-                    return
+                    return False
 
             if self.check_nodes:
-                if not self._check_nodes(self.topo.number_of_switches):
+                if not self._check_nodes():
                     self.topo.stop()
-                    return
+                    return False
 
             self.put()
 
@@ -94,14 +95,14 @@ class Checker(object):
 
             if not self._test_pings():
                 self.topo.stop()
-                return
+                return False
 
             print "ping worked after {} seconds".format(round((time.time() - t), 3))
 
             if self.check_flows:
                 if not self._check_flows():
                     self.topo.stop()
-                    return
+                    return False
 
             self.counter()
 
@@ -122,20 +123,21 @@ class Checker(object):
             t = time.time()
 
             if self.check_links:
-                if not self._check_links(0):
-                    return
+                if not self._check_links(False):
+                    return False
 
             if self.check_nodes:
-                if not self._check_nodes(0):
-                    return
+                if not self._check_nodes(False):
+                    return False
 
             print "links and nodes removed in {} seconds".format(round((time.time() - t), 3))
 
             if self.check_flows:
                 if not self._check_flows():
-                    return
+                    return False
 
             self.counter()
+            return True
 
     def _get_base_url(self):
         return 'http://' + self.ip + ':' + str(self.port) + '/restconf'
@@ -340,7 +342,7 @@ class Checker(object):
         resp = self._http_get(self._get_config_openflow())
         if resp is None or resp.status_code != 200 or resp.content is None:
             print 'no data found'
-            return
+            return False
 
         data = json.loads(resp.content)
         if 'nodes' not in data or 'node' not in data['nodes']:
@@ -363,6 +365,7 @@ class Checker(object):
                         for flow in flows:
                             flowid = flow['id']
                             self._save_flow(nodeid, tableid, flowid, flow)
+        return True
 
     def put(self):
         nodesdir = self.servicesdir + '/nodes'
@@ -393,7 +396,7 @@ class Checker(object):
         nodesdir = self.servicesdir + '/nodes'
         print "configuring flows for {}".format(os.listdir(nodesdir))
         if not os.path.exists(nodesdir):
-            return
+            return False
 
         for nodeid in os.listdir(nodesdir):
             nodedir = nodesdir + '/' + nodeid
@@ -416,12 +419,15 @@ class Checker(object):
                             print "ERROR putting {}".format(flowfile)
                             print self._get_config_flow_url(nodeid, tableid, flowid)
                             print data
+        return True
 
     def delete(self):
         resp = self._http_delete(self._get_config_openflow())
         resp = self._http_get(self._get_config_openflow())
         if resp is not None and resp.status_code != 404:
             print "ERROR configuration has not been deleted"
+            return False
+        return True
 
     def create_pings(self):
         for ping in self.pings:
@@ -587,14 +593,14 @@ class Checker(object):
 
         return False
 
-    def _check_links(self, expected_links):
-        print "checking for expected number of links {}".format(expected_links)
+    def _check_links(self, running=True, topology_name='flow:1'):
+        print "checking for links while network is running={}".format(running)
         current_retries = self.retries
         while (current_retries > 0):
             current_retries = current_retries - 1
-            nodes, links = self._get_nodes_and_links('flow:1')
-            if len(links) == expected_links:
+            if self._is_valid_topology_links(running, topology_name):
                 return True
+
             time.sleep(self.retry_interval)
             if current_retries == 0:
                 retry, ignore = self._ask_retry()
@@ -605,13 +611,32 @@ class Checker(object):
 
         return False
 
-    def _check_nodes(self, expected_nodes):
-        print "checking for expected number of nodes {}".format(expected_nodes)
+    def _is_valid_topology_links(self, running=True, topology_name='flow:1'):
+        nodes, links = self._get_nodes_and_links(topology_name)
+        found_error = False
+        for openflowport in self.topo.openflowportmap:
+            dstSwitch = self.topo.openflowportmap[openflowport]
+            if running and openflowport not in links:
+                print "ERROR: {} port link not found".format(openflowport)
+                found_error = True
+            elif running and links[openflowport].get('destination').get('dest-node') != dstSwitch:
+                print "ERROR: unexpected destination switch for {} port and link {}".format(openflowport,links[openflowport])
+                found_error = True
+            elif not running and openflowport in links:
+                print "ERROR: {} port is still up when network is not running".format(openflowport)
+                found_error = True
+
+        if not found_error:
+            print "all links has been detected properly for topology {}".format(topology_name)
+            return True
+        return False
+
+    def _check_nodes(self, running=True,topology_name='flow:1'):
+        print "checking for nodes while network is running={}".format(running)
         current_retries = self.retries
         while (current_retries > 0):
             current_retries = current_retries - 1
-            nodes, links = self._get_nodes_and_links('flow:1')
-            if len(nodes) == expected_nodes:
+            if self._is_valid_topology_nodes(running, topology_name):
                 return True
             if current_retries > 0:
                 time.sleep(self.retry_interval)
@@ -622,6 +647,23 @@ class Checker(object):
                 if retry:
                     current_retries = self.retries
 
+        return False
+
+    def _is_valid_topology_nodes(self, running=True, topology_name='flow:1'):
+        nodes, links = self._get_nodes_and_links(topology_name)
+        found_error = False
+        for name in self.topo.switches_openflow_names:
+            oname = self.topo.switches_openflow_names[name]
+            if running and oname not in nodes:
+                print "ERROR: {} node not found".format(oname)
+                found_error = True
+            elif not running and oname in nodes:
+                print "ERROR: {}  node is still up when network is not running".format(oname)
+                found_error = True
+
+        if not found_error:
+            print "all nodes has been detected properly for topology {}".format(topology_name)
+            return True
         return False
 
     def _check_flows(self):
@@ -688,6 +730,8 @@ class Checker(object):
         return False
 
     def _ask_retry(self):
+        if not self.ask_for_retry:
+            return False, False
         var = raw_input("Do you want to ignore current error? yes/no:")
         print "you entered", var
         if 'yes' == var:

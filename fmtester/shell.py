@@ -3,9 +3,9 @@
 Usage:
   mnfm [--topology=FILE] [--loops=LOOPS] [--no-loop] [--retries=RETRY] [--interval=SEC] [--delay=SEC]
   mnfm test [--topology=FILE] [--loops=LOOPS] [--no-loop] [--retries=RETRY] [--interval=SEC] [--delay=SEC]
-  mnfm links [-s] [--topology=FILE]
-  mnfm nodes [-s] [--topology=FILE]
-  mnfm flows [-s] [--topology=FILE]
+  mnfm links [-s] [--topology=FILE] [--retries=RETRY] [--interval=SEC] [--ask-for-retry]
+  mnfm nodes [-s] [--topology=FILE] [--retries=RETRY] [--interval=SEC] [--ask-for-retry]
+  mnfm flows [-s] [--topology=FILE] [--retries=RETRY] [--interval=SEC] [--ask-for-retry]
   mnfm save-flows [--dir=DIR]
   mnfm put-flows [--dir=DIR]
   mnfm delete-flows
@@ -66,25 +66,32 @@ class Shell(object):
             checker.retries = int(arguments['--retries'])
         if arguments['--interval']:
             checker.retry_interval = int(arguments['--interval'])
+        if arguments['--ask-for-retry']:
+            checker.ask_for_retry = True
 
         if arguments['links'] and arguments['--stopped']:
-            checker._check_links(0)
+            result = checker._check_links(False)
         elif arguments['links']:
-            checker._check_links(checker.topo.number_of_swiches_links)
+            result = checker._check_links()
         elif arguments['flows']:
-            checker._check_flows()
+            result = checker._check_flows()
         elif arguments['nodes'] and arguments['--stopped']:
-            checker._check_nodes(0)
+            result = checker._check_nodes(False)
+        elif arguments['nodes']:
+            result = checker._check_nodes()    
         elif arguments['flows']:
-            checker._check_nodes(checker.topo.number_of_switches)
+            result = checker._check_nodes()
         elif arguments['put-flows']:
-            checker.put()
+            result = checker.put()
         elif arguments['save-flows']:
-            checker.save()
+            result = checker.save()
         elif arguments['delete-flows']:
-            checker.delete()
+            result = checker.delete()
         else:
-            checker.test()
+            result = checker.test()
+
+        if not result:
+            sys.exit(1)
 
 
 def main():

@@ -45,27 +45,27 @@ class Checker(mntopo.checker.Checker):
             t = time.time()
 
             if self.check_links:
-                if not self._check_links(self.topo.number_of_swiches_links):
+                if not self._check_links():
                     self.topo.stop()
-                    return
+                    return False
 
             if self.check_nodes:
                 if not self._check_nodes(self.topo.number_of_switches):
                     self.topo.stop()
-                    return
+                    return False
 
             print "links and nodes detected in {} seconds".format(round((time.time() - t), 3))
 
             if not self._test_pings():
                 self.topo.stop()
-                return
+                return False
 
             print "ping worked after {} seconds".format(round((time.time() - t), 3))
 
             if self.check_flows:
                 if not self._check_flows():
                     self.topo.stop()
-                    return
+                    return False
 
             self.counter()
 
@@ -87,20 +87,21 @@ class Checker(mntopo.checker.Checker):
             t = time.time()
 
             if self.check_links:
-                if not self._check_links(0):
-                    return
+                if not self._check_links(False):
+                    return False
 
             if self.check_nodes:
                 if not self._check_nodes(0):
-                    return
+                    return False
 
             print "links and nodes removed in {} seconds".format(round((time.time() - t), 3))
 
             if self.check_flows:
                 if not self._check_flows():
-                    return
+                    return False
 
             self.counter()
+            return True
 
     def _get_config_eline_url(self, name):
         return self._get_config_url() + '/brocade-bsc-eline:elines/eline/{}'.format(name)
@@ -339,15 +340,14 @@ class Checker(mntopo.checker.Checker):
             elineurl = self._get_config_eline_url(elinename)
             self._http_delete(elineurl)
 
-    def _check_links(self, expected_links):
-        print "checking for expected number of links {}".format(expected_links)
+    def _check_links(self, running=True):
+        print "checking for links while network is running={}".format(running)
         current_retries = self.retries
         while (current_retries > 0):
             current_retries = current_retries - 1
-            nodes, links = self._get_nodes_and_links('flow:1')
-            srnodes, srlinks = self._get_nodes_and_links('flow:1:sr')
-            if len(links) == expected_links and len(srlinks) == len(links):
+            if self._is_valid_topology_links(running, 'flow:1') and self._is_valid_topology_links(running, 'flow:1:sr'):
                 return True
+
             time.sleep(self.retry_interval)
             if current_retries == 0:
                 retry, ignore = self._ask_retry()
@@ -359,13 +359,12 @@ class Checker(mntopo.checker.Checker):
         return False
 
     def _check_nodes(self, expected_nodes):
-        print "checking for expected number of nodes {}".format(expected_nodes)
+        print "checking for nodes while network is running={}".format(running)
         current_retries = self.retries
         while (current_retries > 0):
             current_retries = current_retries - 1
             nodes, links = self._get_nodes_and_links('flow:1')
-            srnodes, srlinks = self._get_nodes_and_links('flow:1:sr')
-            if len(nodes) == expected_nodes and len(nodes) == len(srnodes):
+            if self._is_valid_topology_nodes(running, 'flow:1') and self._is_valid_topology_nodes(running, 'flow:1:sr'):
                 return True
             if current_retries > 0:
                 time.sleep(self.retry_interval)
