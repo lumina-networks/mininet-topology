@@ -50,7 +50,7 @@ class Checker(mntopo.checker.Checker):
                     return False
 
             if self.check_nodes:
-                if not self._check_nodes(self.topo.number_of_switches):
+                if not self._check_nodes():
                     self.topo.stop()
                     return False
 
@@ -91,7 +91,7 @@ class Checker(mntopo.checker.Checker):
                     return False
 
             if self.check_nodes:
-                if not self._check_nodes(0):
+                if not self._check_nodes(False):
                     return False
 
             print "links and nodes removed in {} seconds".format(round((time.time() - t), 3))
@@ -358,12 +358,11 @@ class Checker(mntopo.checker.Checker):
 
         return False
 
-    def _check_nodes(self, expected_nodes):
+    def _check_nodes(self, running=True):
         print "checking for nodes while network is running={}".format(running)
         current_retries = self.retries
         while (current_retries > 0):
             current_retries = current_retries - 1
-            nodes, links = self._get_nodes_and_links('flow:1')
             if self._is_valid_topology_nodes(running, 'flow:1') and self._is_valid_topology_nodes(running, 'flow:1:sr'):
                 return True
             if current_retries > 0:

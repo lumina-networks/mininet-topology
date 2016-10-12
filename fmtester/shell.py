@@ -78,8 +78,6 @@ class Shell(object):
         elif arguments['nodes'] and arguments['--stopped']:
             result = checker._check_nodes(False)
         elif arguments['nodes']:
-            result = checker._check_nodes()    
-        elif arguments['flows']:
             result = checker._check_nodes()
         elif arguments['put-flows']:
             result = checker.put()
