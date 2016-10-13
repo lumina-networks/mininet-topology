@@ -1,7 +1,7 @@
 """Traffic generator utility
 
 Usage:
-  mnrecv [--topology=FILE] <packets> <filter> [--iface=IFACE] [--timeout=TIMEOUT]
+  mnrecv <packets> <filter> [--iface=IFACE] [--timeout=TIMEOUT] [--topology=FILE] 
   mnrecv (-h | --help)
 
 Options:
@@ -43,15 +43,15 @@ class Shell(object):
 
         topo = mntopo.topo.Topo(props)
 
-        count=int(arguments['<packets>'])
+        count = int(arguments['<packets>'])
         iface = None
         if arguments['--iface']:
             iface = arguments['--iface']
-        timeout=60
+        timeout = 60
         if arguments['--timeout']:
             timeout = int(arguments['--timeout'])
 
-        if len(sniff(count=count, iface=iface, filter=arguments['<filter>'],timeout=timeout)) != count:
+        if len(sniff(count=count, iface=iface, filter=arguments['<filter>'], timeout=timeout)) != count:
             sys.exit(1)
 
 

@@ -1,7 +1,7 @@
 """Traffic generator utility
 
 Usage:
-  mnsend [--topology=FILE] <packets> [--vlan=VLAN] [--iface=IFACE]
+  mnsend <packets> [--vlan=VLAN] [--iface=IFACE] [--topology=FILE]
   mnsend (-h | --help)
 
 Options:
