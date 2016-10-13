@@ -1,15 +1,16 @@
 """Traffic generator utility
 
 Usage:
-  mnrecv <packets> <filter> [--iface=IFACE] [--timeout=TIMEOUT] [--topology=FILE] 
+  mnrecv <filter> [--count=COUNT] [--iface=IFACE] [--timeout=TIMEOUT] [--topology=FILE]
   mnrecv (-h | --help)
 
 Options:
-  -h --help         Show this screen.
-  --topology=FILE   Topolofy file name [default: mn-topo.yml].
-  --iface=IFACE     Interface name
-  --timeout=TIMEOUT Timeout in seconds. Default 30
-  --version         Show version.
+  -h --help                     Show this screen.
+  --topology=FILE               Topolofy file name [default: mn-topo.yml].
+  --iface=IFACE                 Interface name
+  -c <count>, --count <count>   Number of packets to be sent. Default 1.
+  --timeout=TIMEOUT             Timeout in seconds. Default 30
+  --version                     Show version.
 
 """
 
@@ -43,15 +44,22 @@ class Shell(object):
 
         topo = mntopo.topo.Topo(props)
 
-        count = int(arguments['<packets>'])
+        count = 1
+        if arguments['--count']:
+            count = int(arguments['--count'])
+
         iface = None
         if arguments['--iface']:
             iface = arguments['--iface']
+
         timeout = 60
         if arguments['--timeout']:
             timeout = int(arguments['--timeout'])
 
-        if len(sniff(count=count, iface=iface, filter=arguments['<filter>'], timeout=timeout)) != count:
+        wait_packets = count
+        if count <= 0:
+            wait_packets = 1
+        if len(sniff(count=wait_packets, iface=iface, filter=arguments['<filter>'], timeout=timeout)) != count:
             sys.exit(1)
 
 

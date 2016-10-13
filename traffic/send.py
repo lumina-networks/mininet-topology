@@ -1,15 +1,15 @@
 """Traffic generator utility
 
 Usage:
-  mnsend <packets> [--vlan=VLAN] [--iface=IFACE] [--topology=FILE]
+  mnsend <packet>... [--count <count>] [--iface=IFACE] [--topology=FILE]
   mnsend (-h | --help)
 
 Options:
-  -h --help         Show this screen.
-  --topology=FILE   Topolofy file name [default: mn-topo.yml].
-  --vlan=VLAN       Vlan id
-  --iface=IFACE     Interface name
-  --version         Show version.
+  -h --help                     Show this screen.
+  --topology=FILE               Topolofy file name [default: mn-topo.yml].
+  --iface=IFACE                 Interface name
+  -c <count>, --count <count>   Number of packets to be sent. Default 1.
+  --version                     Show version.
 
 """
 
@@ -43,19 +43,21 @@ class Shell(object):
 
         topo = mntopo.topo.Topo(props)
 
-        vlan = None
-        if arguments['--vlan']:
-            vlan = arguments['--vlan']
         iface = None
         if arguments['--iface']:
             iface = arguments['--iface']
 
-        for count in range(0, int(arguments['<packets>'])):
-            if vlan is None:
-                sendp(Ether() / IP() / ICMP(), iface=iface)
-            else:
-                sendp(Ether() / Dot1Q(vlan=int(vlan)) / IP() / ICMP(), iface=iface)
+        count = 1
+        if arguments['--count']:
+            count = int(arguments['--count'])
 
+        print arguments
+        packets = []
+        for packet in arguments['<packet>']:
+            packets.append(eval(packet))
+
+        for p in range(0, count):
+            sendp(packets, iface=iface)
 
 def main():
     Shell()
