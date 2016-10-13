@@ -15,6 +15,7 @@ setup(
     description='Mininet utility to create topologies based on YAML files',
     license='LICENSE',
     install_requires=[
+        "scapy"
     ],
     entry_points={
         'console_scripts': [
