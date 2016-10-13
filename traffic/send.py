@@ -51,7 +51,6 @@ class Shell(object):
         if arguments['--count']:
             count = int(arguments['--count'])
 
-        print arguments
         packets = []
         for packet in arguments['<packet>']:
             packets.append(eval(packet))
