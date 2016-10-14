@@ -59,8 +59,12 @@ class Shell(object):
         wait_packets = count
         if count <= 0:
             wait_packets = 1
-        if len(sniff(count=wait_packets, iface=iface, filter=arguments['<filter>'], timeout=timeout)) != count:
+        recv_packets = len(sniff(count=wait_packets, iface=iface, filter=arguments['<filter>'], timeout=timeout))
+        if  recv_packets != count:
+            print "ERROR: received packets '{}' is different from expected '{}'".format(recv_packets,count)
             sys.exit(1)
+        else:
+            print "received '{}' packets successfully".format(count)
 
 
 def main():
