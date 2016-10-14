@@ -1,11 +1,13 @@
 # Mininet Topology Utility
 
-This tools provides a mechanism to quickly create a Mininet network based on a yml definition. It also provide a testing tool for Flow Manager and a couple of topology generators based.
+This tools provides a mechanism to quickly create a Mininet network based on a yml definition. It also provides testing tools focusing on Openflow and Flow Manager validation, packet generator and a couple of topology generators.
 
 - [Install](#install)
 - [Usage](#usage)
   - [Mininet topology](mininet-topology)
-  - [Flow Manager tester](flow-manager-tester)
+  - [Test utilities](test-utilities)
+  - [Topology generators](topology-generators)
+- [Packet Generator](packet-generator)
 - [Topology YAML](#topology-yaml)
 
 ## Install
@@ -13,17 +15,78 @@ This tools provides a mechanism to quickly create a Mininet network based on a y
 ### From source
 
 ```
-git clone ssh://git@swnstash.brocade.com:7999/skyn/mininet-topology.git
+git clone <this-project-git-url>
 cd mininet-topology
 sudo python setup.py install
 ```
 
 ### Dependencies
 
-The dependencies to run this tools are
+The dependencies to run this tool are
 
 - [Mininet](https://github.com/mininet)
+- [Scapy](http://www.secdev.org/projects/scapy/)
 
+**Scapy** is installed automatically when this project is installed.
+
+**Mininet** is not installed by this project. Following commands shows how to installed from command line.
+
+```
+git clone https://github.com/mininet/mininet.git
+
+cd mininet
+git checkout tags/2.2.1
+cd ..
+sed -i 's/git:\/\/openflowswitch.org\/openflow.git/https:\/\/github.com\/mininet\/openflow.git/g' mininet/util/install.sh
+sed -i 's/git:\/\/gitosis.stanford.edu\/oflops.git/https:\/\/github.com\/mininet\/oflops.git/g' mininet/util/install.sh
+mininet/util/install.sh -n3fv
+```
+
+Mininet current only supports up to 3 mpls label in a packet. Following lines will update Mininet with the given number of labels (`10` in following example commands).
+
+```
+## execute as root
+sudo su
+
+MPLS_MAX=10
+OVS_FILE=http://openvswitch.org/releases/openvswitch-2.5.0.tar.gz
+
+
+# remove current OVS
+apt-get remove openvswitch-common openvswitch-datapath-dkms openvswitch-controller openvswitch-pki openvswitch-switch -y
+
+
+cd /root
+rm -rf ../openvswitch*deb
+rm -rf openvswitch*
+
+
+wget $OVS_FILE
+tar zxvf openvswitch-*.tar.gz
+cd openvswitch-*
+
+if [ "MPLS_MAX" != "" ]
+then
+  for file in `find . -type f -name flow.h`
+  do
+    sed -i "s/define FLOW_MAX_MPLS_LABELS .*/define FLOW_MAX_MPLS_LABELS $MPLS_MAX/g" $file
+    ## following sed is for 2.5.0
+    sed -i "s/sizeof(struct flow_tnl) + 216/sizeof(struct flow_tnl) + 200 + (4 * ROUND_UP(FLOW_MAX_MPLS_LABELS, 2))/g" $file
+    grep "define FLOW_MAX_MPLS_LABELS" $file
+  done
+fi
+
+
+apt-get update
+apt-get install build-essential fakeroot dh-make dh-autoreconf graphviz libssl-dev python-all python-qt4 python-twisted-conch -y
+apt-get install debhelper autoconf automake libssl-dev pkg-config bzip2 openssl python-all procps python-qt4 python-zopeinterface python-twisted-conch -y
+DEB_BUILD_OPTIONS='parallel=8'
+fakeroot debian/rules binary
+cd ..
+dpkg -i openvswitch-common*.deb openvswitch-datapath-dkms*.deb openvswitch-controller*.deb openvswitch-pki*.deb openvswitch-switch*.deb
+/etc/init.d/openvswitch-controller stop
+update-rc.d openvswitch-controller disable
+```
 
 ## Usage
 
@@ -31,7 +94,7 @@ The dependencies to run this tools are
 
 Execute either `sudo mnyml [topology-file-name]` to create a topology based on given topology file. This scripts command just starts a Mininet topology using OVS switches.
 
-### Test utility
+### Test utilities
 
 This tool provides two tester utilites `mntest` and `mnfm`. The options are very similar and the main difference is `mntest` will configure the flows/groups for the given directory. `mnfm` will create automatically eline services and check if these services works.
 
@@ -89,6 +152,32 @@ See following sections for further information.
 
 - [Table Topology Generator](#table-topology-generator)
 - [Datacenter Topology Generator](#datacenter-topology-generator)
+
+
+## Packet Generator
+
+`mnsend` and `mnrecv` commands create packets based on **Scapy** format and validate these packets has been received on the egress side.
+
+### Sending packets
+
+`mnsend` requires to be executed in a host or switch inside of Mininet network. If not, packets will not be inserted in the Mininet network unless we use a interface from the compute running Mininet connected to the Mininet network.
+
+The main argument required by `mnsend` is a packet. For example, sending an ICMP packet with a vlan can be achieved by `mnsend 'Ether() / Dot1Q(vlan=100) / IP() / ICMP()'`
+
+Please, refer to [Scapy documentation](http://scapy.readthedocs.io/en/latest/) to understand how packets can be created.
+
+This command also provides options such `count` to define the number of packets to be sent or `iface` which defines the interface to be used.
+
+Refer to `mnsend -h` for further information.
+
+
+### Validating if packet has been received
+
+`mnrecv` counts if given number of packets has been received for a period of time. The main parameter is to be provided is `filter` in [BPF](http://biot.com/capstats/bpf.html) format.
+
+For example, `mnrecv "vlan 100" -c 10 -t 60` checks if 10 packets has been received with vlan 100 for a maximum of 60 seconds time.
+
+
 
 ## Mininet YAML description
 
