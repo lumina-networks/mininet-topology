@@ -1,8 +1,8 @@
 """Mininet Topology Tester.
 
 Usage:
-  mntest [--topology=FILE] [--loops=LOOPS] [--no-loop] [--retries=RETRY] [--interval=SEC] [--force-pings] [--delay=SEC] [--ask-for-retry]
-  mntest test [--topology=FILE] [--loops=LOOPS] [--no-loop] [--retries=RETRY] [--interval=SEC] [--force-pings] [--delay=SEC] [--ask-for-retry]
+  mntest [--topology=FILE] [--loops=LOOPS] [--no-loop] [--retries=RETRY] [--interval=SEC] [--force-pings] [--delay=SEC] [--ask-for-retry] [--no-links]
+  mntest test [--topology=FILE] [--loops=LOOPS] [--no-loop] [--retries=RETRY] [--interval=SEC] [--force-pings] [--delay=SEC] [--ask-for-retry] [--no-links]
   mntest links [-s] [--topology=FILE] [--retries=RETRY] [--interval=SEC] [--ask-for-retry]
   mntest nodes [-s] [--topology=FILE] [--retries=RETRY] [--interval=SEC] [--ask-for-retry]
   mntest flows [-s] [--topology=FILE] [--retries=RETRY] [--interval=SEC] [--ask-for-retry]
@@ -23,6 +23,7 @@ Options:
   --retries=RETRY   Max number of retries.
   --interval=SEC    Interval in seconds between retries.
   --ask-for-retry   The utility will prompt a question to confirm if it should retry or ignore in case of errors.
+  --no-links        Do not check links.
 
 """
 

@@ -101,7 +101,7 @@ class Checker(mntopo.checker.Checker):
                     return False
 
             self.counter()
-            return True
+        return True
 
     def _get_config_eline_url(self, name):
         return self._get_config_url() + '/brocade-bsc-eline:elines/eline/{}'.format(name)

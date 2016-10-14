@@ -1,8 +1,8 @@
 """Flow Manager Tester.
 
 Usage:
-  mnfm [--topology=FILE] [--loops=LOOPS] [--no-loop] [--retries=RETRY] [--interval=SEC] [--delay=SEC]
-  mnfm test [--topology=FILE] [--loops=LOOPS] [--no-loop] [--retries=RETRY] [--interval=SEC] [--delay=SEC]
+  mnfm [--topology=FILE] [--loops=LOOPS] [--no-loop] [--retries=RETRY] [--interval=SEC] [--delay=SEC] [--no-links]
+  mnfm test [--topology=FILE] [--loops=LOOPS] [--no-loop] [--retries=RETRY] [--interval=SEC] [--delay=SEC] [--no-links]
   mnfm links [-s] [--topology=FILE] [--retries=RETRY] [--interval=SEC] [--ask-for-retry]
   mnfm nodes [-s] [--topology=FILE] [--retries=RETRY] [--interval=SEC] [--ask-for-retry]
   mnfm flows [-s] [--topology=FILE] [--retries=RETRY] [--interval=SEC] [--ask-for-retry]
@@ -15,13 +15,14 @@ Options:
   -h --help         Show this screen.
   --version         Show version.
   -s --stopped      If Mininet is not running.
-  --no-loop         No loop in case of test.
+  --no-loop         No loop in case of test
   --delay=SEC       Number of seconds after successful test and before stopping services and network.
   --loops=LOOPS     Maximum number of loops.
   --topology=FILE   Topolofy file name [default: mn-topo.yml].
   --dir=DIR         Directory name to read/save flows [default: services].
   --retries=RETRY   Max number of retries.
   --interval=SEC    Interval in seconds between retries.
+  --no-links        Do not check links.
 
 """
 
@@ -56,6 +57,8 @@ class Shell(object):
 
         if arguments['--no-loop']:
             checker.loop = False
+        if arguments['--no-links']:
+            checker.check_links = False
         if arguments['--delay']:
             checker.delay = int(arguments['--delay'])
         if arguments['--loops']:

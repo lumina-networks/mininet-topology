@@ -137,7 +137,7 @@ class Checker(object):
                     return False
 
             self.counter()
-            return True
+        return True
 
     def _get_base_url(self):
         return 'http://' + self.ip + ':' + str(self.port) + '/restconf'
