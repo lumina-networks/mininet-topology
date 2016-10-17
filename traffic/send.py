@@ -16,7 +16,7 @@ Options:
 import os
 import sys
 import yaml
-from mntopo.docopt import docopt
+from docopt.docopt import docopt
 import mntopo.topo
 from mininet.log import setLogLevel, info, error
 from scapy.all import *

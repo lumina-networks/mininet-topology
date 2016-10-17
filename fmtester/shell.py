@@ -30,7 +30,7 @@ Options:
 import os
 import sys
 import yaml
-from mntopo.docopt import docopt
+from docopt.docopt import docopt
 import fmtester.checker
 from mininet.log import setLogLevel, info, error
 

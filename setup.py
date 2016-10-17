@@ -8,6 +8,7 @@ setup(
     author='jcastro',
     author_email='jcastro@brocade.com',
     packages=[
+        'docopt',
         'mntopo',
         'fmtester',
         'traffic'
