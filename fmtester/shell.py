@@ -1,14 +1,14 @@
 """Flow Manager Tester.
 
 Usage:
-  mnfm [--topology=FILE] [--loops=LOOPS] [--no-loop] [--retries=RETRY] [--interval=SEC] [--delay=SEC] [--no-links]
-  mnfm test [--topology=FILE] [--loops=LOOPS] [--no-loop] [--retries=RETRY] [--interval=SEC] [--delay=SEC] [--no-links]
-  mnfm links [-s] [--topology=FILE] [--retries=RETRY] [--interval=SEC] [--ask-for-retry]
-  mnfm nodes [-s] [--topology=FILE] [--retries=RETRY] [--interval=SEC] [--ask-for-retry]
-  mnfm flows [-s] [--topology=FILE] [--retries=RETRY] [--interval=SEC] [--ask-for-retry]
-  mnfm save-flows [--dir=DIR]
-  mnfm put-flows [--dir=DIR]
-  mnfm delete-flows
+  mnfm [--topology=FILE] [--loops=LOOPS] [--no-loop] [--retries=RETRY] [--interval=SEC] [--delay=SEC] [--no-links] [--controller=IP]...
+  mnfm test [--topology=FILE] [--loops=LOOPS] [--no-loop] [--retries=RETRY] [--interval=SEC] [--delay=SEC] [--no-links] [--controller=IP]...
+  mnfm links [-s] [--topology=FILE] [--retries=RETRY] [--interval=SEC] [--ask-for-retry] [--controller=IP]...
+  mnfm nodes [-s] [--topology=FILE] [--retries=RETRY] [--interval=SEC] [--ask-for-retry] [--controller=IP]...
+  mnfm flows [-s] [--topology=FILE] [--retries=RETRY] [--interval=SEC] [--ask-for-retry] [--controller=IP]...
+  mnfm save-flows [--dir=DIR] [--controller=IP]...
+  mnfm put-flows [--dir=DIR] [--controller=IP]...
+  mnfm delete-flows [--controller=IP]...
   mnfm (-h | --help)
 
 Options:
@@ -23,6 +23,7 @@ Options:
   --retries=RETRY   Max number of retries.
   --interval=SEC    Interval in seconds between retries.
   --no-links        Do not check links.
+  -c, --controller=IP   Controller IP address
 
 """
 
@@ -52,6 +53,16 @@ class Shell(object):
         if props is None:
             print "ERROR: yml topology file {} not found".format(file)
             sys.exit()
+
+        if arguments['--controller']:
+            props['controller'] = []
+            i = 0
+            for ip in arguments['--controller']:
+                props['controller'].append(
+                    {'name': "c{}".format(i),
+                     'ip': ip
+                     })
+                i = i + 1
 
         checker = fmtester.checker.Checker(props)
 

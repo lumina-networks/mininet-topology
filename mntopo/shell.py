@@ -1,12 +1,13 @@
 """Mininet Topology Utility
 
 Usage:
-  mnyml [--topology=FILE]
+  mnyml [--topology=FILE] [--controller=IP]...
   mnyml (-h | --help)
 
 Options:
   -h --help     Show this screen.
-  --topology=FILE   Topolofy file name [default: mn-topo.yml].
+  -t, --topology=FILE   Topolofy file name [default: mn-topo.yml].
+  -c, --controller=IP   Controller IP address
   --version     Show version.
 
 """
@@ -37,6 +38,16 @@ class Shell(object):
         if props is None:
             print "ERROR: yml topology file not found"
             sys.exit()
+
+        if arguments['--controller']:
+            props['controller'] = []
+            i = 0
+            for ip in arguments['--controller']:
+                props['controller'].append(
+                    {'name': "c{}".format(i),
+                     'ip': ip
+                     })
+                i = i + 1
 
         topo = mntopo.topo.Topo(props)
         topo.start()

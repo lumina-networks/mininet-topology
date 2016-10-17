@@ -1,14 +1,14 @@
 """Mininet Topology Tester.
 
 Usage:
-  mntest [--topology=FILE] [--loops=LOOPS] [--no-loop] [--retries=RETRY] [--interval=SEC] [--force-pings] [--delay=SEC] [--ask-for-retry] [--no-links]
-  mntest test [--topology=FILE] [--loops=LOOPS] [--no-loop] [--retries=RETRY] [--interval=SEC] [--force-pings] [--delay=SEC] [--ask-for-retry] [--no-links]
-  mntest links [-s] [--topology=FILE] [--retries=RETRY] [--interval=SEC] [--ask-for-retry]
-  mntest nodes [-s] [--topology=FILE] [--retries=RETRY] [--interval=SEC] [--ask-for-retry]
-  mntest flows [-s] [--topology=FILE] [--retries=RETRY] [--interval=SEC] [--ask-for-retry]
-  mntest save-flows [--dir=DIR]
-  mntest put-flows [--dir=DIR]
-  mntest delete-flows
+  mntest [--topology=FILE] [--loops=LOOPS] [--no-loop] [--retries=RETRY] [--interval=SEC] [--force-pings] [--delay=SEC] [--ask-for-retry] [--no-links] [--controller=IP]...
+  mntest test [--topology=FILE] [--loops=LOOPS] [--no-loop] [--retries=RETRY] [--interval=SEC] [--force-pings] [--delay=SEC] [--ask-for-retry] [--no-links] [--controller=IP]...
+  mntest links [-s] [--topology=FILE] [--retries=RETRY] [--interval=SEC] [--ask-for-retry] [--controller=IP]...
+  mntest nodes [-s] [--topology=FILE] [--retries=RETRY] [--interval=SEC] [--ask-for-retry] [--controller=IP]...
+  mntest flows [-s] [--topology=FILE] [--retries=RETRY] [--interval=SEC] [--ask-for-retry] [--controller=IP]...
+  mntest save-flows [--dir=DIR] [--controller=IP]...
+  mntest put-flows [--dir=DIR] [--controller=IP]...
+  mntest delete-flows [--controller=IP]...
   mntest (-h | --help)
 
 Options:
@@ -24,6 +24,7 @@ Options:
   --interval=SEC    Interval in seconds between retries.
   --ask-for-retry   The utility will prompt a question to confirm if it should retry or ignore in case of errors.
   --no-links        Do not check links.
+  -c, --controller=IP   Controller IP address
 
 """
 
@@ -53,6 +54,16 @@ class Shell(object):
         if props is None:
             print "ERROR: yml topology file {} not found".format(file)
             sys.exit(1)
+
+        if arguments['--controller']:
+            props['controller'] = []
+            i = 0
+            for ip in arguments['--controller']:
+                props['controller'].append(
+                    {'name': "c{}".format(i),
+                     'ip': ip
+                     })
+                i = i + 1
 
         checker = mntopo.checker.Checker(props)
 
