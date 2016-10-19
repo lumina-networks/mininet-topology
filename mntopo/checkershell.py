@@ -69,6 +69,8 @@ class Shell(object):
 
         if arguments['--no-loop']:
             checker.loop = False
+        if arguments['--no-links']:
+            checker.check_links = False
         if arguments['--delay']:
             checker.delay = int(arguments['--delay'])
         if arguments['--loops']:
