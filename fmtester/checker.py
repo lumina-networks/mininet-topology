@@ -423,7 +423,7 @@ class Checker(mntopo.checker.Checker):
                             print "ERROR: node {} group {} not running".format(nodeid, groupid)
                             error_found = True
                         if nodeid not in calculated_nodes or groupid not in calculated_nodes[nodeid]['groups']:
-                            print "ERROR: node {} group {} group not present in calculated groups".format(nodeid, flowid)
+                            print "ERROR: node {} group {} group not present in calculated groups".format(nodeid, groupid)
                             error_found = True
                         if nodeid not in ovs_flows_groups or groupid not in ovs_flows_groups[nodeid]['groups']:
                             print "ERROR: node {} group {} configured but not in OVS".format(nodeid, groupid)
