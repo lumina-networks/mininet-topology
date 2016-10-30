@@ -130,7 +130,7 @@ class Topo(object):
                 self.host_connected_switch[dst] = src
 
         if 'controller' not in props or props['controller'] is None:
-            props['controller'] = []
+            props['controller'] = [{'name':'c0','ip':'127.0.0.1'}]
 
         for controller in props['controller']:
             controllers.append(RemoteController(controller['name'], ip=controller['ip']))
@@ -139,6 +139,12 @@ class Topo(object):
         cleanup()
 
         self.net = Mininet(topo=self.topo, switch=self.switchClass, controller=self.controllers[0])
+
+        # if there are multiple controllers, let's append the rest of the controllers
+        itercrtls = iter(self.controllers)
+        next(itercrtls)
+        for ctrl in itercrtls:
+            self.net.addController(ctrl)
 
         if 'interface' not in self.props or self.props['interface'] is None:
             self.props['interface'] = []
