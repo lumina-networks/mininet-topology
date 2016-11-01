@@ -194,6 +194,8 @@ class Topo(object):
 
         return nodes
 
+    def containsSwitch(self,name):
+        return str(name) in self.switches_openflow_names or str(name) in self.switches_openflow_names.values()
 
 def exists_bridge(name):
     try:

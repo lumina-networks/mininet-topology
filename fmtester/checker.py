@@ -121,6 +121,8 @@ class Checker(mntopo.checker.Checker):
                 if nodes is not None:
                     for node in nodes:
                         nodeid = node['node-id']
+                        if not self.topo.containsSwitch(nodeid):
+                            continue
                         srnodes[nodeid] = {'groups': [], 'flows': []}
                         brocadesr = node.get('brocade-bsc-sr:sr')
                         groups = None
@@ -134,7 +136,7 @@ class Checker(mntopo.checker.Checker):
 
                         flows = None
                         if brocadesr is not None:
-                            append_calculated_flows(srnodes, brocadesr.get('calculated-flows'))
+                            self.append_calculated_flows(srnodes, brocadesr.get('calculated-flows'))
 
         resp = self._http_get(self._get_operational_url() + '/brocade-bsc-path:paths')
         if resp is not None and resp.status_code == 200 and resp.content is not None:
@@ -143,10 +145,10 @@ class Checker(mntopo.checker.Checker):
                 paths = data.get('paths')
                 if paths.get('path') is not None:
                     for path in paths.get('path'):
-                        append_calculated_flows(srnodes, path.get('calculated-flows'))
+                        self.append_calculated_flows(srnodes, path.get('calculated-flows'))
 
                 if paths.get('mpls-nodes') is not None:
-                    append_calculated_flow_nodes(srnodes, paths.get('mpls-nodes').get('calculated-flow-nodes'))
+                    self.append_calculated_flow_nodes(srnodes, paths.get('mpls-nodes').get('calculated-flow-nodes'))
 
         resp = self._http_get(self._get_operational_url() + '/brocade-bsc-eline:elines')
         if resp is not None and resp.status_code == 200 and resp.content is not None:
@@ -155,21 +157,21 @@ class Checker(mntopo.checker.Checker):
                 elines = data.get('elines')
                 if elines.get('eline') is not None:
                     for eline in elines.get('eline'):
-                        append_calculated_flows(srnodes, eline.get('calculated-flows'))
+                        self.append_calculated_flows(srnodes, eline.get('calculated-flows'))
 
         resp = self._http_get(self._get_operational_url() + '/brocade-bsc-path-mpls:mpls-nodes')
         if resp is not None and resp.status_code == 200 and resp.content is not None:
             data = json.loads(resp.content)
             mpls_nodes = data.get('mpls-nodes')
             if mpls_nodes is not None:
-                append_calculated_flow_nodes(srnodes, mpls_nodes.get('calculated-flow-nodes'))
+                self.append_calculated_flow_nodes(srnodes, mpls_nodes.get('calculated-flow-nodes'))
 
         resp = self._http_get(self._get_operational_url() + '/brocade-bsc-eline-mpls:eline-nodes')
         if resp is not None and resp.status_code == 200 and resp.content is not None:
             data = json.loads(resp.content)
             mpls_nodes = data.get('eline-nodes')
             if mpls_nodes is not None:
-                append_calculated_flow_nodes(srnodes, mpls_nodes.get('calculated-flow-nodes'))
+                self.append_calculated_flow_nodes(srnodes, mpls_nodes.get('calculated-flow-nodes'))
 
         return srnodes
 
@@ -449,7 +451,7 @@ class Checker(mntopo.checker.Checker):
                 if 'bscids' in node:
                     for bscid in node['bscids']:
                         if nodeid not in config_nodes or bscid not in config_nodes[nodeid]['flowsbscids']:
-                            print "ERROR: node {} flow {} running in OVS but not configured".format(nodeid, flowid)
+                            print "ERROR: node {} flow {} running in OVS but not configured".format(nodeid, bscid)
                             error_found = True
 
                 if 'groups' in node:
@@ -472,29 +474,31 @@ class Checker(mntopo.checker.Checker):
         return False
 
 
+    def append_calculated_flow_nodes(self,nodes, cnodes):
+        if cnodes is not None:
+            cnodes = cnodes.get('calculated-flow-node')
+            if cnodes is not None:
+                for cnode in cnodes:
+                    self.append_calculated_flows(nodes, cnode.get('calculated-flows'))
+
+
+    def append_calculated_flows(self,nodes, flows):
+        if flows is not None:
+            cflows = flows.get('calculated-flow')
+            if cflows is not None:
+                for flow in cflows:
+                    flowid = 'table/{}/flow/{}'.format(flow['table-id'], flow['flow-name'])
+                    nodeid = flow['node-id']
+                    if not self.topo.containsSwitch(nodeid):
+                        continue
+                    if nodeid not in nodes:
+                        nodes[nodeid] = {'groups': [], 'flows': []}
+                    nodes[nodeid]['flows'].append(flowid)
+
+
 def get_property(props, name, default_value=None):
     if props is not None:
         value = props.get(name)
         if value is not None:
             return value
     return default_value
-
-
-def append_calculated_flow_nodes(nodes, cnodes):
-    if cnodes is not None:
-        cnodes = cnodes.get('calculated-flow-node')
-        if cnodes is not None:
-            for cnode in cnodes:
-                append_calculated_flows(nodes, cnode.get('calculated-flows'))
-
-
-def append_calculated_flows(nodes, flows):
-    if flows is not None:
-        cflows = flows.get('calculated-flow')
-        if cflows is not None:
-            for flow in cflows:
-                flowid = 'table/{}/flow/{}'.format(flow['table-id'], flow['flow-name'])
-                nodeid = flow['node-id']
-                if nodeid not in nodes:
-                    nodes[nodeid] = {'groups': [], 'flows': []}
-                nodes[nodeid]['flows'].append(flowid)

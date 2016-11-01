@@ -235,6 +235,8 @@ class Checker(object):
                     for node in nodes:
                         if unicode(node['node-id']).startswith(unicode('host')):
                             continue
+                        if not self.topo.containsSwitch(nodeid):
+                            continue
                         nodelist[node['node-id']] = node
                 links = topology[0].get('link')
                 if links is not None:
@@ -299,6 +301,9 @@ class Checker(object):
 
         for node in data['nodes']['node']:
             nodeid = node['id']
+            if not self.topo.containsSwitch(nodeid):
+                continue
+
             flows = {}
             cookies = {}
             groups = {}
