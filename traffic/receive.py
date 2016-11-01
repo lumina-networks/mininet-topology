@@ -1,14 +1,14 @@
 """Traffic generator utility
 
 Usage:
-  mnrecv <filter> [--count=COUNT] [--iface=IFACE] [--timeout=TIMEOUT] [--topology=FILE]
+  mnrecv <filter> [--count=COUNT] [--iface=IFACE] [--timeout=TIMEOUT] [--percentage=PERCENTAGE]
   mnrecv (-h | --help)
 
 Options:
   -h --help                     Show this screen.
-  --topology=FILE               Topolofy file name [default: mn-topo.yml].
   --iface=IFACE                 Interface name
   -c <count>, --count <count>   Number of packets to be sent. Default 1.
+  -p <percentage>, --percentage <percentage> Percentage of packets that can be lost.
   --timeout=TIMEOUT             Timeout in seconds. Default 30
   --version                     Show version.
 
@@ -26,27 +26,21 @@ from scapy.all import *
 class Shell(object):
 
     def __init__(self):
-        arguments = docopt(__doc__, version='Mininet Topology Utility 1.0')
+        arguments = docopt(__doc__, version='Mininet Topology Utility 2.0')
 
-        setLogLevel('info')
-        file = 'mn-topo.yml'
-        if arguments['--topology']:
-            file = arguments['--topology']
-
-        props = None
-        if (os.path.isfile(file)):
-            with open(file, 'r') as f:
-                props = yaml.load(f)
-
-        if props is None:
-            print "ERROR: yml topology file not found"
-            sys.exit()
-
-        topo = mntopo.topo.Topo(props)
 
         count = 1
         if arguments['--count']:
             count = int(arguments['--count'])
+
+        percentage = 0
+        if arguments['--percentage']:
+            percentage = int(arguments['--percentage'])
+
+        if count > 0 and percentage > 0 and percentage <= 100:
+            count = count - ((percentage * count)/100)
+            if count <= 0:
+                count = 1
 
         iface = None
         if arguments['--iface']:
@@ -60,11 +54,13 @@ class Shell(object):
         if count <= 0:
             wait_packets = 1
         recv_packets = len(sniff(count=wait_packets, iface=iface, filter=arguments['<filter>'], timeout=timeout))
-        if  recv_packets != count:
+
+        if (count == 0 and recv_packets > 0) or recv_packets < count:
             print "ERROR: received packets '{}' is different from expected '{}'".format(recv_packets,count)
             sys.exit(1)
-        else:
-            print "received '{}' packets successfully".format(count)
+
+        print "received packets '{}' successfully. Expected '{}'".format(recv_packets,count)
+
 
 
 def main():
