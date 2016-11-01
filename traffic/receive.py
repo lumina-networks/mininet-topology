@@ -59,7 +59,7 @@ class Shell(object):
             print "ERROR: received packets '{}' is different from expected '{}'".format(recv_packets,count)
             sys.exit(1)
 
-        print "received packets '{}' successfully. Expected '{}'".format(recv_packets,count)
+        print "received '{}' packets successfully. Expected '{}'".format(recv_packets,count)
 
 
 
