@@ -6,6 +6,7 @@ import requests
 import time
 from requests.auth import HTTPBasicAuth
 
+calculated_flow_exception=['table/0/flow/fm-sr-link-discovery']
 
 class Checker(mntopo.checker.Checker):
     """ Openflow Flow ManagerChecker """
@@ -410,7 +411,7 @@ class Checker(mntopo.checker.Checker):
                         if nodeid not in operational_nodes or bscid not in operational_nodes[nodeid]['flowsbscids']:
                             print "ERROR: node {} flow {} not running".format(nodeid, flowid)
                             error_found = True
-                        if nodeid not in calculated_nodes or flowid not in calculated_nodes[nodeid]['flows']:
+                        if flowid not in calculated_flow_exception and (nodeid not in calculated_nodes or flowid not in calculated_nodes[nodeid]['flows']):
                             print "ERROR: node {} flow {} not present in calculated nodes".format(nodeid, flowid)
                             error_found = True
                         if nodeid not in ovs_flows_groups or bscid not in ovs_flows_groups[nodeid]['bscids']:
