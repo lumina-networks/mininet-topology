@@ -197,6 +197,44 @@ class Topo(object):
     def containsSwitch(self,name):
         return str(name) in self.switches_openflow_names or str(name) in self.switches_openflow_names.values()
 
+    def get_nodes_flows_groups_stats(self, prefix=None):
+        nodes = {}
+        for name in self.switches_openflow_names:
+            if not exists_bridge(name):
+                continue
+            nodes[name] = {'flows': {}, 'groups': {}}
+            output = subprocess.check_output(
+                "sudo ovs-ofctl dump-group-stats {} --protocol=Openflow13".format(name), shell=True)
+            pattern = r'group_id=(\d+)'
+
+            regex = re.compile(r'(group_id=.*)', re.IGNORECASE)
+            regexvalues = re.compile(r'group_id=(\d+),duration=[\d]*.[\d]*s,ref_count=[\d]*,packet_count=(\d+),byte_count=(\d+)', re.IGNORECASE)
+            for linematch in regex.finditer(output):
+                line = linematch.group(1)
+                for match in regexvalues.finditer(line):
+                    nodes[name]['groups'][match.group(1)] = {
+                        'packets': match.group(2),
+                        'bytes': match.group(3)
+                    }
+
+            output = subprocess.check_output(
+                "sudo ovs-ofctl dump-flows {} --protocol=Openflow13".format(name), shell=True)
+
+            regex = re.compile(r'(cookie=.*)', re.IGNORECASE)
+            regexvalues = re.compile(r'cookie=(0[xX][0-9a-fA-F]+),.*n_packets=(\d+),.*n_bytes=(\d+)', re.IGNORECASE)
+            for linematch in regex.finditer(output):
+                line = linematch.group(1)
+                for match in regexvalues.finditer(line):
+                    number = int(match.group(1), 16)
+                    if prefix is None or number >> 56 == prefix:
+                        bscid = (number & 0x00FFFFFF00000000) >> 32
+                        nodes[name]['flows'][str(number)] = {
+                            'packets': match.group(2),
+                            'bytes': match.group(3)
+                        }
+
+        return nodes
+
 def exists_bridge(name):
     try:
         grepOut = subprocess.check_output("sudo ovs-vsctl br-exists {}".format(name), shell=True)

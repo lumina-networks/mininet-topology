@@ -1,6 +1,7 @@
 import mntopo.topo
 import os
 import json
+import csv
 import requests
 import time
 from requests.auth import HTTPBasicAuth
@@ -677,6 +678,7 @@ class Checker(object):
             error_found = False
             current_retries = current_retries - 1
             ovs_flows_groups = self.topo.get_nodes_flows_groups(0x1f)
+            ovs_flows_groups_stats = self.topo.get_nodes_flows_groups_stats(0x1f)
             config_nodes = self._get_flow_group(self._get_config_openflow(), 0x1f)
             operational_nodes = self._get_flow_group(self._get_operational_openflow(), 0x1f)
 
@@ -720,6 +722,96 @@ class Checker(object):
                         if nodeid not in config_nodes or groupid not in config_nodes[nodeid]['groups']:
                             print "ERROR: node {} group {} running in OVS but not configured".format(nodeid, groupid)
                             error_found = True
+
+            if not error_found:
+                return True
+            if current_retries > 0:
+                time.sleep(self.retry_interval)
+            if current_retries == 0:
+                retry, ignore = self._ask_retry()
+                if ignore:
+                    return True
+                if retry:
+                    current_retries = self.retries
+
+        return False
+
+    def _check_stats(self):
+        current_retries = self.retries
+        while (current_retries > 0):
+            error_found = False
+            current_retries = current_retries - 1
+            ovs_flows_groups = self.topo.get_nodes_flows_groups(0x1f)
+            ovs_flows_groups_stats = self.topo.get_nodes_flows_groups_stats(0x1f)
+            config_nodes = self._get_flow_group(self._get_config_openflow(), 0x1f)
+            operational_nodes = self._get_flow_group(self._get_operational_openflow(), 0x1f)
+
+            for nodeid in config_nodes:
+                node = config_nodes[nodeid]
+                if 'flows' in node:
+                    for flowid in node['flows']:
+                        if nodeid not in operational_nodes or flowid not in operational_nodes[nodeid]['flows']:
+                            print "ERROR: node {} flow {} not running, not found in operational data store".format(nodeid, flowid)
+                            error_found = True
+                        elif node['flows'][flowid]['cookie'] not in ovs_flows_groups[nodeid]['cookies']:
+                            print "WARNING: node {} flow {} configured in OVS but not running same version".format(nodeid, flowid)
+
+                if 'groups' in node:
+                    for groupid in node['groups']:
+                        if nodeid not in operational_nodes or 'groups' not in operational_nodes[nodeid] or groupid not in operational_nodes[nodeid]['groups']:
+                            print "ERROR: node {} group {} not running".format(nodeid, groupid)
+                            error_found = True
+                        if nodeid not in ovs_flows_groups or groupid not in ovs_flows_groups[nodeid]['groups']:
+                            print "ERROR: node {} group {} configured but not in OVS".format(nodeid, groupid)
+                            error_found = True
+
+            for nodeid in operational_nodes:
+                node = operational_nodes[nodeid]
+                if 'flows' in node:
+                    for flowid in node['flows']:
+                        if nodeid not in config_nodes or flowid not in config_nodes[nodeid]['flows']:
+                            print "ERROR: node {} flow {} running but not configured".format(nodeid, flowid)
+                            error_found = True
+
+                if 'groups' in node:
+                    for groupid in node['groups']:
+                        if nodeid not in config_nodes or groupid not in config_nodes[nodeid]['groups']:
+                            print "ERROR: node {} group {} running but not configured".format(nodeid, groupid)
+                            error_found = True
+
+            for nodeid in ovs_flows_groups:
+                node = ovs_flows_groups[nodeid]
+                if 'groups' in node:
+                    for groupid in node['groups']:
+                        if nodeid not in config_nodes or groupid not in config_nodes[nodeid]['groups']:
+                            print "ERROR: node {} group {} running in OVS but not configured".format(nodeid, groupid)
+                            error_found = True
+
+            filename = ".previous_flows_groups.json"
+            for nodeid in ovs_flows_groups_stats:
+                node = ovs_flows_groups_stats[nodeid]
+                if os.path.exists(filename):
+                    with open(filename, 'r') as infile:
+                        prev_stats = json.load(infile)
+                        try:
+                            for cookie, flow in node['flows'].iteritems():
+                                if int(flow['packets']) < int(prev_stats[nodeid]['flows'][cookie]['packets']):
+                                    print "ERROR: flow w/ cookie {} on node {} had {} packet count before-- now has {}; it may have been reinstalled" \
+                                        .format(cookie, nodeid, prev_stats[nodeid]['flows'][cookie]['packets'], flow['packets'])
+                                    error_found = True
+
+                            for groupid, group in node['groups'].iteritems():
+                                if int(group['packets']) < int(prev_stats[nodeid]['groups'][groupid]['packets']):
+                                    print "ERROR: group {} on node {} had {} packet count before-- now has {}; it may have been reinstalled" \
+                                        .format(groupid, nodeid, prev_stats[nodeid]['groups'][groupid]['packets'], group['packets'])
+                                    error_found = True
+
+                        except KeyError:
+                            print "Current and previous nodes out of sync, overwriting old data. Please try again"
+                            break
+
+            with open(filename, 'w') as outfile:
+                json.dump(ovs_flows_groups_stats, outfile)
 
             if not error_found:
                 return True
