@@ -53,7 +53,8 @@ class Topo(object):
             props['host'] = []
 
         for host in props['host']:
-            hosts[host['name']] = topo.addHost(host['name'], ip=host['ip'], defaultRoute='via ' + host['gw'])
+            mac = None if 'mac' not in host else host['mac']
+            hosts[host['name']] = topo.addHost(host['name'], ip=host['ip'], defaultRoute='via ' + host['gw'], mac=mac)
             hosts_ip[host['name']] = host['ip'].split('/')[0]
 
         if 'switch' not in props or props['switch'] is None:
