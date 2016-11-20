@@ -10,6 +10,7 @@ def get_host(row, column):
     return {
         'name': 'h' + get_node_id(row, column),
         'ip': '10.0.' + str(row + 1) + '.' + str(column + 1) + '/16',
+        'mac': "00:00:10:00:{:02d}:{:02d}".format(row + 1, column + 1),
         'gw': '10.0.0.1'
     }
 
