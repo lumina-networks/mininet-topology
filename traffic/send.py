@@ -38,8 +38,7 @@ class Shell(object):
         for packet in arguments['<packet>']:
             packets.append(eval(packet))
 
-        for p in range(0, count):
-            sendp(packets, iface=iface)
+        sendp(packets, iface=iface, count=count)
 
 def main():
     Shell()
