@@ -305,6 +305,6 @@ Options:
   -c, --columns=COLUMNS   Number of rows [default: 3].
   -x, --links-per-rows=LINKS_PER_ROWS   Number of links connecting per pair horizontal switches [default: 1].
   -z, --links-per-columns=LINKS_PER_COLUMNS   Number of links connecting per pair vertical switches  [default: 1].
-  -c, --controller=IP   Controller IP address
+  -o, --controller=IP   Controller IP address
   --version     Show version.
 ```
