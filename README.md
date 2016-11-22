@@ -256,26 +256,21 @@ Example, a datacenter with 3 spines, 4 leafs and 5 compute per leaf will be crea
 
 ```
 $  topodc -h
-usage: mn-datacenter-topo.py [-h] [--file FILE] [--spines SPINES]
-                             [--leafs LEAFS] [--computes COMPUTES]
-                             [--datacenters DATACENTERS]
-                             [--controller CONTROLLER]
+Topology Data Center Generator
 
-Create a list table of switches for given number of rows and columns
+Usage:
+  topodc [--file=FILE] [--spines=SPINES] [--leafs=LEAFS] [--computes=COMPUTES] [--datacenters=DATACENTERS] [--controller=IP]...
+  topodc (-h | --help)
 
-optional arguments:
-  -h, --help            show this help message and exit
-  --file FILE, -f FILE  File name
-  --spines SPINES, -s SPINES
-                        Number of spines
-  --leafs LEAFS, -l LEAFS
-                        Number of leafs
-  --computes COMPUTES, -c COMPUTES
-                        Number of leafs
-  --datacenters DATACENTERS, -d DATACENTERS
-                        Links per each pair of switches connected horizontally
-  --controller CONTROLLER, -co CONTROLLER
-                        Controller ip address
+Options:
+  -h --help     Show this screen.
+  -f, --file=FILE   Topolofy file name [default: mn-topo.yml].
+  -s, --spines=SPINES   Number of spines [default: 2].
+  -l, --leafs=LEAFS   Number of leafs [default: 4].
+  -p, --computes=COMPUTES   Number of computes per leaf [default: 1].
+  -d, --datacenters=DATACENTERS   Number of datacenters [default: 1].
+  -c, --controller=IP   Controller IP address
+  --version     Show version.
 ```
 
 ## Table Topology Generator
@@ -297,23 +292,19 @@ Example, a table with 3 rows, 2 columns will be created by `topotb -r 3 -c 2`
 
 ```
 $ topotb -h
-usage: mn-table-topo.py [-h] [--file FILE] [--rows ROWS] [--columns COLUMNS]
-                        [--links-per-rows LINKS_PER_ROWS]
-                        [--links-per-columns LINKS_PER_COLUMNS]
-                        [--controller CONTROLLER]
+Topology Table Generator
 
-Create a list table of switches for given number of rows and columns
+Usage:
+  topotb [--file=FILE] [--rows=ROWS] [--columns=COLUMNS] [--links-per-rows=LINKS_PER_ROWS] [--links-per-columns=LINKS_PER_COLUMNS] [--controller=IP]...
+  topotb (-h | --help)
 
-optional arguments:
-  -h, --help            show this help message and exit
-  --file FILE, -f FILE  File name
-  --rows ROWS, -r ROWS  Number of rows
-  --columns COLUMNS, -c COLUMNS
-                        Number of columns
-  --links-per-rows LINKS_PER_ROWS, -lr LINKS_PER_ROWS
-                        Links per each pair of switches connected horizontally
-  --links-per-columns LINKS_PER_COLUMNS, -lc LINKS_PER_COLUMNS
-                        Links per each pair of switches connected vertically
-  --controller CONTROLLER, -co CONTROLLER
-                        Controller ip address
+Options:
+  -h --help     Show this screen.
+  -f, --file=FILE   Topolofy file name [default: mn-topo.yml].
+  -r, --rows=ROWS   Number of rows [default: 3].
+  -c, --columns=COLUMNS   Number of rows [default: 3].
+  -x, --links-per-rows=LINKS_PER_ROWS   Number of links connecting per pair horizontal switches [default: 1].
+  -z, --links-per-columns=LINKS_PER_COLUMNS   Number of links connecting per pair vertical switches  [default: 1].
+  -c, --controller=IP   Controller IP address
+  --version     Show version.
 ```
