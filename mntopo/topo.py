@@ -54,6 +54,7 @@ class Topo(object):
 
         for host in props['host']:
             mac = None if 'mac' not in host else host['mac']
+            print "adding host {}".format(host['name'])
             hosts[host['name']] = topo.addHost(host['name'], ip=host['ip'], defaultRoute='via ' + host['gw'], mac=mac)
             hosts_ip[host['name']] = host['ip'].split('/')[0]
 
@@ -67,7 +68,10 @@ class Topo(object):
                 switch['type'] = 'ovs'
             switches[name] = switch
             if switch['type'] == 'ovs':
+                print "adding switch {}".format(name)
                 switches[name] = topo.addSwitch(name, dpid=switch['dpid'], protocols=switch['protocols'])
+            else:
+                print "switch {} is not OVS".format(name)
             switches_openflow_names[name] = "openflow:" + str(int(switch['dpid'], 16))
 
         if 'link' not in props or props['link'] is None:
@@ -91,7 +95,10 @@ class Topo(object):
                 destination = hosts[dst_name]
 
             if ('type' not in source or source['type'] == 'ovs') and ('type' not in destination or destination['type'] == 'ovs'):
+                print "adding link from {} to {}".format(source, destination)
                 topo.addLink(source, destination)
+            else:
+                print "link from {} to {} does not connect two OVS switches".format(source, destination)
 
             if src_name in switches and dst_name in switches:
                 self.number_of_swiches_links = self.number_of_swiches_links + 2
@@ -157,6 +164,7 @@ class Topo(object):
 
         for interface in self.props['interface']:
             name = interface['name']
+            print "adding interface {} to switch".format(name, interface['switch'])
             self.interfaces[name] = Intf(name, node=self.net.nameToNode[interface['switch']])
 
         self.net.start()
