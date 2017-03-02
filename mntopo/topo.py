@@ -63,7 +63,11 @@ class Topo(object):
         self.number_of_switches = len(props['switch'])
         for switch in props['switch']:
             name = switch['name']
-            switches[name] = topo.addSwitch(name, dpid=switch['dpid'], protocols=switch['protocols'])
+            if 'type' not in switch:
+                switch['type'] = 'ovs'
+            switches[name] = switch
+            if switch['type'] == 'ovs':
+                switches[name] = topo.addSwitch(name, dpid=switch['dpid'], protocols=switch['protocols'])
             switches_openflow_names[name] = "openflow:" + str(int(switch['dpid'], 16))
 
         if 'link' not in props or props['link'] is None:
@@ -86,7 +90,8 @@ class Topo(object):
             else:
                 destination = hosts[dst_name]
 
-            topo.addLink(source, destination)
+            if ('type' not in source or source['type'] == 'ovs') and ('type' not in destination or destination['type'] == 'ovs'):
+                topo.addLink(source, destination)
 
             if src_name in switches and dst_name in switches:
                 self.number_of_swiches_links = self.number_of_swiches_links + 2
