@@ -1,7 +1,7 @@
 """Topology Table Generator
 
 Usage:
-  topotb [--file=FILE] [--rows=ROWS] [--columns=COLUMNS] [--links-per-rows=LINKS_PER_ROWS] [--links-per-columns=LINKS_PER_COLUMNS] [--controller=IP]...
+  topotb [--file=FILE] [--rows=ROWS] [--columns=COLUMNS] [--links-per-rows=LINKS_PER_ROWS] [--links-per-columns=LINKS_PER_COLUMNS] [--interfaces=INTERFACES]... [--controller=IP]...
   topotb (-h | --help)
 
 Options:
@@ -12,6 +12,7 @@ Options:
   -x, --links-per-rows=LINKS_PER_ROWS   Number of links connecting per pair horizontal switches [default: 1].
   -z, --links-per-columns=LINKS_PER_COLUMNS   Number of links connecting per pair vertical switches  [default: 1].
   -o, --controller=IP   Controller IP address
+  -i, --interfaces=INTERFACES   List of interface to switch mappings, colon as delimiter <switch:interface>
   --version     Show version.
 
 """
@@ -98,6 +99,12 @@ class TopoTable(object):
                 if row < rows - 1:
                     for repeat in range(0, links_per_columns):
                         data['link'].append({'source': switch['name'], 'destination': bottom})
+
+        data['interface'] = []
+        if arguments['--interfaces']:
+            for inter in arguments['--interfaces']:
+                name, switch = inter.split(':')
+                data['interface'].append({'name': name, 'switch': switch})
 
         with open(file_name, 'w') as outfile:
             outfile.write(yaml.dump(data, default_flow_style=False))

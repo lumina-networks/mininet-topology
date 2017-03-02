@@ -1,7 +1,7 @@
 """Topology Data Center Generator
 
 Usage:
-  topodc [--file=FILE] [--spines=SPINES] [--leafs=LEAFS] [--computes=COMPUTES] [--datacenters=DATACENTERS] [--controller=IP]...
+  topodc [--file=FILE] [--spines=SPINES] [--leafs=LEAFS] [--computes=COMPUTES] [--datacenters=DATACENTERS] [--interfaces=INTERFACES]... [--controller=IP]...
   topodc (-h | --help)
 
 Options:
@@ -12,6 +12,7 @@ Options:
   -p, --computes=COMPUTES   Number of computes per leaf [default: 1].
   -d, --datacenters=DATACENTERS   Number of datacenters [default: 1].
   -c, --controller=IP   Controller IP address
+  -i, --interfaces=INTERFACES   List of interface to switch mappings, colon as delimiter <switch:interface>
   --version     Show version.
 
 """
@@ -71,6 +72,12 @@ class TopoDataCenter(object):
                 for spine in range(0, spines):
                     spine_name = 's' + str(dc_base + (spine + 5001))
                     data['link'].append({'source': switch, 'destination': spine_name})
+
+        data['interface'] = []
+        if arguments['--interfaces']:
+            for inter in arguments['--interfaces']:
+                name, switch = inter.split(':')
+                data['interface'].append({'name': name, 'switch': switch})
 
         with open(file_name, 'w') as outfile:
             outfile.write(yaml.dump(data, default_flow_style=False))
