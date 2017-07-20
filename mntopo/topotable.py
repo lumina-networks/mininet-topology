@@ -71,13 +71,9 @@ class TopoTable(object):
 
         # we first calculate the host to ensure they are created in port 1 on all switches
         for row in range(0, rows):
-            column = 0
-            host = get_host(row, column)
-            switch_name = get_switch_name(row, column)
-            data['host'].append(get_host(row, column))
-            data['link'].append({'source': host['name'], 'destination': switch_name})
-            if (columns > 1):
-                column = columns - 1
+            for column in range(0, columns):
+                if row > 0 and row < rows - 1 and column > 0 and column < columns - 1:
+                    continue
                 host = get_host(row, column)
                 switch_name = get_switch_name(row, column)
                 data['host'].append(get_host(row, column))
