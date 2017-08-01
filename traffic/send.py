@@ -6,7 +6,7 @@ Usage:
 
 Options:
   -h --help                     Show this screen.
-  --iface=IFACE                 Interface name
+  -i <iface>, --iface <iface>   Interface name
   -c <count>, --count <count>   Number of packets to be sent. Default 1.
   --version                     Show version.
 
@@ -14,10 +14,7 @@ Options:
 
 import os
 import sys
-import yaml
 from docopt.docopt import docopt
-import mntopo.topo
-from mininet.log import setLogLevel, info, error
 from scapy.all import *
 
 
@@ -39,6 +36,7 @@ class Shell(object):
             packets.append(eval(packet))
 
         sendp(packets, iface=iface, count=count)
+
 
 def main():
     Shell()
