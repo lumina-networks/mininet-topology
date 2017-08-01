@@ -1,6 +1,6 @@
 # Mininet Topology Utility
 
-This tools provides a mechanism to quickly create a Mininet network based on a yml definition. It also provides testing tools focusing on Openflow and Flow Manager validation, packet generator and a couple of topology generators.
+This tool provides a mechanism to quickly create a Mininet network based on a YAML definition. It also provides testing tools focusing on Openflow validation, packet generator and a couple of topology generators.
 
 - [Install](#install)
 - [Usage](#usage)
@@ -15,7 +15,7 @@ This tools provides a mechanism to quickly create a Mininet network based on a y
 ### From source
 
 ```
-git clone <this-project-git-url>
+git clone https://github.com/lumina-networks/mininet-topology
 cd mininet-topology
 sudo python setup.py install
 ```
@@ -42,14 +42,14 @@ sed -i 's/git:\/\/gitosis.stanford.edu\/oflops.git/https:\/\/github.com\/mininet
 mininet/util/install.sh -n3fv
 ```
 
-Mininet current only supports up to 3 mpls label in a packet. Following lines will update Mininet with the given number of labels (`10` in following example commands).
+Mininet currently only supports up to 3 mpls label in a packet. If you plan to use MPLS heavily and more than 3 mpls label depth is required then following lines will update Mininet with the given number of labels (`10` in following example commands).
 
 ```
 ## execute as root
 sudo su
 
 MPLS_MAX=10
-OVS_FILE=http://openvswitch.org/releases/openvswitch-2.5.0.tar.gz
+OVS_FILE=http://openvswitch.org/releases/openvswitch-2.7.0.tar.gz
 
 
 # remove current OVS
@@ -70,9 +70,7 @@ then
   for file in `find . -type f -name flow.h`
   do
     sed -i "s/define FLOW_MAX_MPLS_LABELS .*/define FLOW_MAX_MPLS_LABELS $MPLS_MAX/g" $file
-    ## following sed is for 2.5.0
-    sed -i "s/sizeof(struct flow_tnl) + 216/sizeof(struct flow_tnl) + 200 + (4 * ROUND_UP(FLOW_MAX_MPLS_LABELS, 2))/g" $file
-    grep "define FLOW_MAX_MPLS_LABELS" $file
+    sed -i "s/sizeof(struct flow_tnl) + 248/sizeof(struct flow_tnl) + 232 + (4 * ROUND_UP(FLOW_MAX_MPLS_LABELS, 2))/g" $file
   done
 fi
 
@@ -92,28 +90,27 @@ update-rc.d openvswitch-controller disable
 
 ### Mininet topology
 
-Execute either `sudo mnyml [topology-file-name]` to create a topology based on given topology file. This scripts command just starts a Mininet topology using OVS switches.
+Execute `sudo mnyml` to create a topology based on given topology defined in `mn-topo.yml` file. If topology YAML file is named differently then execute `sudo mnyml -t <topology-file-name.yml>`. This script command starts a Mininet topology using OVS switches.
 
 ### Test utilities
 
-This tool provides two tester utilites `mntest` and `mnfm`. The options are very similar and the main difference is `mntest` will configure the flows/groups for the given directory. `mnfm` will create automatically eline services and check if these services works.
+This tool provides a tester utility command `mntest`.
 
-Flow Manager tester checks if flows, groups and services runs properly on the given topology. It makes following tasks:
+`mntest` checks if flows, groups and services runs properly on the given topology executing following tasks:
 
 * cleanup any previous Mininet network using Mininet `cleanup` method
 * starts a Mininet network based on give YAML topology
-* configure an eline/path sr services for each given pair of hosts
 * checks if SDN controller has discovered all nodes and links properly
+* checks if flows are installed in all switches properly.
 * checks if pings works between each pair of hosts for given services
-* checks if flows are generated properly. Checking if all flows in OVS switches, Openflow model (configuration and operational) and Flow Manager models are in sync. For OVS switches pulls the information using `dump-flows` and `dump-groups` command. For the rest it uses BSC REST API.
 * stops Mininet and executes Mininet `cleanup` method
 * check if all nodes and links are removed
 * check if all flows are removed properly from Openflow and FlowManager model.
 * repeats previous steps as a loop
 
-Execute either `sudo mnfm [topology-file-name]` or `sudo mntest [topology-file-name]`
+Execute either `sudo mntest [topology-file-name]`
 
-Following are the attributes that can be added to the topology yaml file to include Flow Manager testing capabilities.
+Following are the attributes that can be added to the topology YAML file to include Flow Manager testing capabilities.
 
 * **ping**: a list of `source` and `destination` hosts to configure a eline/path service. `fmmn` will test the ping between the two hosts. If not provided and `check_bsc` is True, then a ping service for each couple of hosts will be created.
 * **loop**: True if it should loop the whole testing process. Default `True`.
@@ -160,7 +157,7 @@ See following sections for further information.
 
 ### Sending packets
 
-`mnsend` requires to be executed in a host or switch inside of Mininet network. If not, packets will not be inserted in the Mininet network unless we use a interface from the compute running Mininet connected to the Mininet network.
+`mnsend` requires to be executed in a host or switch inside of Mininet network. Note that `mnsend` requires to be executed from inside mininet session if traffic is generated from a host inside mininet.
 
 The main argument required by `mnsend` is a packet. For example, sending an ICMP packet with a vlan can be achieved by `mnsend 'Ether() / Dot1Q(vlan=100) / IP() / ICMP()'`
 
@@ -192,7 +189,7 @@ controller:
 ```
 
 
-* **host**: a list of host identified by name. It must also contain a network and gateway
+* **host**: a list of host identified by name. It must contain a network ip/mask and gateway.
 
 ```
 host:
@@ -205,7 +202,7 @@ host:
 ```
 
 
-* **switch**: a list of switches identified by name. It must also contain a dpip and protocol version. Dpid is in hexadecimal format without the `0x` prefix.
+* **switch**: a list of switches identified by name. It must contain a dpip and protocol version. Dpid is in hexadecimal format without the `0x` prefix.
 
 ```
 switch:
@@ -217,7 +214,7 @@ switch:
     protocols: OpenFlow13
 ```
 
-* **link**: a list of links that can connect either a host with a switch or a switch with a switch. It is possible to define multiple links between two nodes just repeating the value. In the following example, h11 is connected to s11. Also, two links connects s11 and s12
+* **link**: a list of links that can connect either a host with a switch or a switch with a switch. It is possible to define multiple links between two nodes just repeating the value. In the following example, h11 is connected to s11 and two links connects s11 and s12
 
 ```
 link:
@@ -230,7 +227,7 @@ link:
 ```
 
 
-* **interface**: a list of interfaces on the host connected to the Mininet switches. This is typically empty unless we want to connect Mininet to an external network.
+* **interface**: a list of interfaces on the machine running Mininet to the switches. This is typically empty unless we want to connect Mininet to an external network.
 
 ```
 interface:
@@ -241,7 +238,7 @@ interface:
 
 ## Datacenter Topology Generator
 
-**topodc** creates a topology yaml file like a datacenter with spines, leafs and computes.
+**topodc** creates a topology YAML file like a datacenter with spines, leafs and computes.
 
 Following optional parameters can be provided:
 * **output file name** (default `mn-topo.yml`)
@@ -277,7 +274,7 @@ Options:
 
 
 
-**topotb** creates a topology yaml file like a table for given number of rows and columns. A host will be attached to each switch on the first and last column.
+**topotb** creates a topology YAML file like a table for given number of rows and columns. A host will be attached to each switch on the first and last column.
 
 Following optional parameters can be provided:
 * **output file name** (default `mn-topo.yml`)
