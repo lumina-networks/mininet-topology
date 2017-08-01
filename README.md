@@ -4,11 +4,11 @@ This tool provides a mechanism to quickly create a Mininet network based on a YA
 
 - [Install](#install)
 - [Usage](#usage)
-  - [Mininet topology](mininet-topology)
-  - [Test utilities](test-utilities)
-  - [Topology generators](topology-generators)
+  - [Mininet topology](#mininet-topology)
+  - [Test utilities](#test-utilities)
+  - [Topology generators](#topology-generators)
 - [Packet Generator](packet-generator)
-- [Topology YAML](#topology-yaml)
+- [Mininet YAML description](#Mininet-yaml-description)
 
 ## Install
 
