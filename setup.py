@@ -10,7 +10,6 @@ setup(
     packages=[
         'docopt',
         'mntopo',
-        'fmtester',
         'traffic'
     ],
     description='Mininet utility to create topologies based on YAML files',
