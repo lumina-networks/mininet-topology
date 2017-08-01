@@ -7,8 +7,10 @@ This tool provides a mechanism to quickly create a Mininet network based on a YA
   - [Mininet topology](#mininet-topology)
   - [Test utilities](#test-utilities)
   - [Topology generators](#topology-generators)
-- [Packet Generator](packet-generator)
-- [Mininet YAML description](#Mininet-yaml-description)
+- [Packet Generator](#packet-generator)
+- [Mininet YAML description](#mininet-yaml-description)
+- [Datacenter Topology Generator](#datacenter-topology-generator)
+- [Table Topology Generator](#table-topology-generator)
 
 ## Install
 
