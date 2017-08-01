@@ -22,7 +22,6 @@ setup(
         'console_scripts': [
             'mnyml = mntopo.shell:main',
             'mntest = mntopo.checkershell:main',
-            'mnfm = fmtester.shell:main',
             'mnrecv = traffic.receive:main',
             'mnsend = traffic.send:main',
             'topodc = mntopo.topodatacenter:main',
